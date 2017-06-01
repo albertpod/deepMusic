@@ -14,7 +14,8 @@ def load_set(type):
     loader = dataload.DataLoad()
     loader.reset()
     if loader.is_empty():
-        [loader.main(i, r'%sdata%s%s%sLed Zeppelin' % (delimiter, delimiter, type, delimiter)) for i in range(2)]
+        loader.main(1, r'%sdata%s%s%sLed Zeppelin' % (delimiter, delimiter, type, delimiter))
+        loader.main(0, r'%sdata%s%s%sBach' % (delimiter, delimiter, type, delimiter))
     return loader
 
 loaderTrain = load_set('Train')

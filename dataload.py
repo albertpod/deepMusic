@@ -31,7 +31,7 @@ class DataLoad:
             path: folder where the files are
         """
         os.chdir(os.curdir + path)
-        
+
         for file in os.listdir():
             try:
                 print(file)
@@ -45,7 +45,8 @@ class DataLoad:
         print("Artist imported")
         os.chdir('..')
         os.chdir('..')
-        
+        os.chdir('..')
+
     def reset(self):
         """
         Resets the lists
