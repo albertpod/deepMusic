@@ -2,28 +2,20 @@
 """
 Created on Tue May 30 12:04:19 2017
 
-@author: Theo
-"""
-"""Coordinate everything
+@authors: Theo, Albert
+
+Coordinate everything
 """
 
-import os
+from cross_platform import delimiter, directory
 import dataload
 
-os.chdir(r'C:\Users\Theo\Desktop\ClassifierAlbert\data')
+def load_set(type):
+    loader = dataload.DataLoad()
+    loader.reset()
+    if loader.is_empty():
+        [loader.main(i, r'%sdata%s%s%sLed Zeppelin' % (delimiter, delimiter, type, delimiter)) for i in range(2)]
+    return loader
 
-#%% cellule
-
-loaderTrain = dataload.DataLoad()
-loaderTrain.reset()
-if loaderTrain.is_empty():
-    loaderTrain.main(1,r'\Train\Led Zeppelin')
-    loaderTrain.main(0,r'\Train\Bach')
-    print("Training set importer")
-
-loaderTest = dataload.DataLoad()
-loaderTest.reset()
-if loaderTest.is_empty():
-    loaderTest.main(1,r'\Test\Led Zeppelin')
-    loaderTest.main(0,r'\Test\Bach')
-    print("Testing set imported")
+loaderTrain = load_set('Train')
+loaderTest = load_set('Test')
