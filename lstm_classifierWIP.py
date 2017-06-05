@@ -96,66 +96,65 @@ n_hidden = 50
 n_classes = 2
 
 # tf graph placeholders
-with tf.variable_scope('test10'):
-    X = tf.placeholder(shape=[None,n_tracks, n_steps, n_input], dtype=tf.float32)
-    y = tf.placeholder(shape=[None, n_classes], dtype=tf.float32)
-    
-    # define weights
-    weights = tf.Variable(tf.random_normal([n_hidden, n_classes]))
-    biases = tf.Variable(tf.random_normal([n_classes]))
-    
-    def RNN(X, weights, biases):
-        # unstack to get a list of 'n_steps' tensors of shape (batch_size, n_input)
-        X = tf.unstack(X, n_tracks,1)
-        for k in range(len(X)):
-            X[k] = tf.unstack(X[k], n_steps, 1)
-        X = X[0]+X[1]+X[2]
-        lstm_cell = rnn.BasicLSTMCell(n_hidden)
+X = tf.placeholder(shape=[None, n_tracks, n_steps, n_input], dtype=tf.float32)
+y = tf.placeholder(shape=[None, n_classes], dtype=tf.float32)
 
-        # lstm cell output
-        outputs, states = rnn.static_rnn(lstm_cell, X, dtype=tf.float32)
-        #activation_output = tf.reshape(tf.matmul(outputs[-1], weights) + biases, (batch_size,))
-        return tf.matmul(outputs[-1], weights) + biases
-    
-    pred = RNN(X, weights, biases)
-    
-    # define loss and optimizer
-    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
-    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
-    
-    # evaluate model
-    correct_pred = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
-    accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-    
-    # initialize
-    init = tf.global_variables_initializer()
-    
-    # launch the graph
-    with tf.Session() as sess:
-        sess.run(init)
-        step = 1
-        # keep training till max iterations
-        while step * batch_size < epoches:
-            rand_index = np.random.choice(len(X_train), size=batch_size)
-            rand_x = X_train[rand_index]
-            rand_y = y_train[rand_index]
-            rand_x = rand_x.reshape((batch_size,n_tracks, n_steps, n_input))
-            rand_y = rand_y.reshape((batch_size, n_classes)) # why y has this shape ?
-            rand_y = rand_y.astype(float)
-            sess.run(optimizer, feed_dict={X: rand_x, y: rand_y})
-            sess.run(pred, feed_dict={X: rand_x, y: rand_y})
-            #predicted, real = pred.eval(feed_dict={X: rand_x, y: rand_y}).reshape((100,)), rand_y.reshape((100,))
-            #softmax_xentropy = tf.nn.softmax_cross_entropy_with_logits(logits=predicted, labels=real)
-            #xentropy_softmax_y_out = sess.run(softmax_xentropy)
-            if step % display_step == 0:
-                acc = sess.run(accuracy, feed_dict={X: rand_x, y: rand_y})
-                temp_loss = sess.run(loss, feed_dict={X: rand_x, y: rand_y})
-                print('Generation: %s. Loss = %s, Accuracy = %s' % (step + 1, temp_loss, acc))
-            step += 1
-        print('Optimization finished')
-    
-        X_test = X_test.reshape((len(X_test),n_tracks, n_steps, n_input))
-        y_test = y_test.reshape((len(y_test), n_classes))
-    
-        print("Testing Accuracy :",  sess.run(accuracy, feed_dict={X: X_test, y: y_test}))
-        print("Duration :",time.time()-t)
+# define weights
+weights = tf.Variable(tf.random_normal([n_hidden, n_classes]))
+biases = tf.Variable(tf.random_normal([n_classes]))
+
+def RNN(X, weights, biases):
+    # unstack to get a list of 'n_steps' tensors of shape (batch_size, n_input)
+    X = tf.unstack(X, n_tracks,1)
+    for k in range(len(X)):
+        X[k] = tf.unstack(X[k], n_steps, 1)
+    X = X[0]+X[1]+X[2]
+    lstm_cell = rnn.BasicLSTMCell(n_hidden)
+
+    # lstm cell output
+    outputs, states = rnn.static_rnn(lstm_cell, X, dtype=tf.float32)
+    #activation_output = tf.reshape(tf.matmul(outputs[-1], weights) + biases, (batch_size,))
+    return tf.matmul(outputs[-1], weights) + biases
+
+pred = RNN(X, weights, biases)
+
+# define loss and optimizer
+loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
+optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss)
+
+# evaluate model
+correct_pred = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
+accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+
+# initialize
+init = tf.global_variables_initializer()
+
+# launch the graph
+with tf.Session() as sess:
+    sess.run(init)
+    step = 1
+    # keep training till max iterations
+    while step * batch_size < epoches:
+        rand_index = np.random.choice(len(X_train), size=batch_size)
+        rand_x = X_train[rand_index]
+        rand_y = y_train[rand_index]
+        rand_x = rand_x.reshape((batch_size,n_tracks, n_steps, n_input))
+        rand_y = rand_y.reshape((batch_size, n_classes)) # why y has this shape ?
+        rand_y = rand_y.astype(float)
+        sess.run(optimizer, feed_dict={X: rand_x, y: rand_y})
+        sess.run(pred, feed_dict={X: rand_x, y: rand_y})
+        #predicted, real = pred.eval(feed_dict={X: rand_x, y: rand_y}).reshape((100,)), rand_y.reshape((100,))
+        #softmax_xentropy = tf.nn.softmax_cross_entropy_with_logits(logits=predicted, labels=real)
+        #xentropy_softmax_y_out = sess.run(softmax_xentropy)
+        if step % display_step == 0:
+            acc = sess.run(accuracy, feed_dict={X: rand_x, y: rand_y})
+            temp_loss = sess.run(loss, feed_dict={X: rand_x, y: rand_y})
+            print('Generation: %s. Loss = %s, Accuracy = %s' % (step + 1, temp_loss, acc))
+        step += 1
+    print('Optimization finished')
+
+    X_test = X_test.reshape((len(X_test), n_tracks, n_steps, n_input))
+    y_test = y_test.reshape((len(y_test), n_classes))
+
+    print("Testing Accuracy :",  sess.run(accuracy, feed_dict={X: X_test, y: y_test}))
+    print("Duration :", time.time() - t)
