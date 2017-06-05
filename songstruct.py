@@ -132,7 +132,7 @@ class Song:
         tmp = dict(zip(self.tracks, [track.notes[0].tick for track in self.tracks]))
         sorted_x = sorted(tmp.items(), key=operator.itemgetter(1))
         sorted_x.reverse()
-        self.tracks = sorted_x
+        self.tracks = [k for k,t in sorted_x]
 
     def normalize(self, inverse=False):
         """ Transform the song into a tempo independent song
