@@ -125,6 +125,15 @@ class Song:
         # TODO: Assert that the scale factor is not a float (the % =0)
         return 4 * self.ticks_per_beat // (Song.MAXIMUM_SONG_RESOLUTION*Song.NOTES_PER_BAR)
 
+    def sort_by_tick(self):
+        """ Sorts tracks and put the one that starts the latest first.
+        Takes the first note of all tracks and compare their tick, aka, the moment they begin
+        """
+        tmp = dict(zip(self.tracks, [track.notes[0].tick for track in self.tracks]))
+        sorted_x = sorted(tmp.items(), key=operator.itemgetter(1))
+        sorted_x.reverse()
+        self.tracks = sorted_x
+
     def normalize(self, inverse=False):
         """ Transform the song into a tempo independent song
         Warning: If the resolution of the song is is more fine that the given
