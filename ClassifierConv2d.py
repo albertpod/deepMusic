@@ -44,30 +44,45 @@ def extend_y(y):
 # dataset = jl.load(r'C:\Users\Theo\Desktop\ClassifierAlbert\datasetSeries.pkl')
 # X_train, X_test, y_train, y_test = dataset
 
-X_train, X_test, y_train, y_test = loaderTrain.songs[:], loaderTest.songs[:], loaderTrain.artists[:], loaderTest.artists[:]
+X_train, X_test, y_train, y_test = loaderTrain.songs[:], loaderTest.songs[:], loaderTrain.artists[
+                                                                              :], loaderTest.artists[:]
+
 
 def toArray(X, y):
+    """Turns lists X and y into arrays, only using relevant informations and a certain number of tracks and notes.
+    This function selects the track that starts the latest and put the temporal starting point of gathering the input
+    there.
+    Args:
+        X: cf dataload
+        y: cf dataload
+    Return:
+         X: array of shape (number of songs kept, NB_TRACKS_READ, NB_NOTES_READ, 3)
+         y: array of shape (number of songs kept, 1)
+    """
     X_train_tmp = []
     indsTrain = []
     for song in X:
         tmp = []
         cmpt = 0
         if len(song.tracks) > 2:
+            song.sort_by_tick()
+            start_tick = song.tracks[0].notes[0].duration
             for track in song.tracks:
                 tmp_track = []
                 if track > NB_NOTES_READ and cmpt < 3:
                     for note in track.notes:
-                        tmp_track.append([note.note, note.tick, note.duration])
+                        if note.tick >= start_tick:  # TODO: make sure there are enough notes.
+                            tmp_track.append([note.note, note.tick, note.duration])
                     cmpt += 1
                     tmp.append(tmp_track)
             if cmpt == NB_TRACKS_READ:
                 X_train_tmp.append(tmp)
                 indsTrain.append(X.index(song))
-            cmpt = 0
     return np.array([[[k for k in track[:NB_NOTES_READ]] for track in song] for song in X_train_tmp], dtype=np.float32), \
            np.array(y)[indsTrain]
 
-def toArray2(X, y): # collect more batches
+
+def toArray2(X, y):  # collect more batches
     X_train_tmp = []
     indsTrain = []
     for song in X:
@@ -84,9 +99,9 @@ def toArray2(X, y): # collect more batches
                         tmp_track.append([note.note, note.tick, note.duration])
                     cmpt += 1
                     tmp.append(tmp_track)
-                    if track > 2*NB_NOTES_READ and cmpt2 < NB_TRACKS_READ:
-                        tmp_track2+=tmp_track[NB_NOTES_READ:2*NB_NOTES_READ]
-                        cmpt2 +=1
+                    if track > 2 * NB_NOTES_READ and cmpt2 < NB_TRACKS_READ:
+                        tmp_track2 += tmp_track[NB_NOTES_READ:2 * NB_NOTES_READ]
+                        cmpt2 += 1
                         tmp2.append(tmp_track2)
             if cmpt == NB_TRACKS_READ:
                 X_train_tmp.append(tmp)
@@ -97,10 +112,10 @@ def toArray2(X, y): # collect more batches
     return np.array([[[k for k in track[:NB_NOTES_READ]] for track in song] for song in X_train_tmp], dtype=np.float32), \
            np.array(y)[indsTrain]
 
-X_train, y_train = toArray2(X_train, y_train)
-X_test, y_test = toArray2(X_test, y_test)
 
-# %%
+X_train, y_train = toArray(X_train, y_train)
+X_test, y_test = toArray(X_test, y_test)
+
 print("X_train.shape : {0}\nX_test.shape : {1}".format(X_train.shape, X_test.shape))
 print("y_train.shape : {0}\ny_test.shape : {1}".format(y_train.shape, y_test.shape))
 
@@ -122,36 +137,38 @@ batch_size = 50  # was 100. Maybe we should try to cut the files in smaller part
 display_step = 10
 
 # network parameters
-n_input = 3  # was 1, changed it to get 3 informations on each note
+n_input = 3  # was 1, changed it to get 3 information on each note
 n_tracks = NB_TRACKS_READ  # for now, fixed value, but will have to be changed to "None" (any value)
 n_steps = NB_NOTES_READ  # was 10
 n_hidden = 50
 n_classes = 2
 
 # Placeholders
-X = tf.placeholder(shape=[None, n_tracks, n_steps, n_input], dtype=tf.float32,name="X")
-y_true = tf.placeholder(shape=[None, n_classes], dtype=tf.float32,name ="y_true")
+X = tf.placeholder(shape=[None, n_tracks, n_steps, n_input], dtype=tf.float32, name="X")
+y_true = tf.placeholder(shape=[None, n_classes], dtype=tf.float32, name="y_true")
 y_true_cls = tf.argmax(y_true, dimension=1)
+
 
 def new_weights(shape):
     return tf.Variable(tf.truncated_normal(shape, stddev=0.05))
 
+
 def new_biases(length):
     return tf.Variable(tf.constant(0.05, shape=[length]))
 
-def new_conv_layer(input,              # The previous layer.
-                   num_input_channels, # Num. channels in prev. layer.
-                   filter_size,        # Width and height of filters.
-                   num_filters,        # Number of filters.
-                   shapeIn,
+
+def new_conv_layer(input,  # The previous layer.
+                   num_input_channels,  # Num. channels in prev. layer.
+                   filter_size,  # Width and height of filters.
+                   num_filters,  # Number of filters.
                    use_pooling=True):  # Use 2x2 max-pooling.
 
     # Shape of the filter-weights for the convolution.
     # This format is determined by the TensorFlow API.
-    shape = input.shape
+    shape = [filter_size, filter_size, num_input_channels, num_filters]
 
     # Create new weights aka. filters with the given shape.
-    weights = new_weights(shape=shape)
+    weights = new_weights(shape)
 
     # Create new biases, one for each filter.
     biases = new_biases(length=num_filters)
@@ -198,6 +215,7 @@ def new_conv_layer(input,              # The previous layer.
     # because we will plot the weights later.
     return layer, weights
 
+
 def flatten_layer(layer):
     # Get the shape of the input layer.
     layer_shape = layer.get_shape()
@@ -222,10 +240,11 @@ def flatten_layer(layer):
     # Return both the flattened layer and the number of features.
     return layer_flat, num_features
 
-def new_fc_layer(input,          # The previous layer.
-                 num_inputs,     # Num. inputs from prev. layer.
-                 num_outputs,    # Num. outputs.
-                 use_relu=True): # Use Rectified Linear Unit (ReLU)?
+
+def new_fc_layer(input,  # The previous layer.
+                 num_inputs,  # Num. inputs from prev. layer.
+                 num_outputs,  # Num. outputs.
+                 use_relu=True):  # Use Rectified Linear Unit (ReLU)?
 
     # Create new weights and biases.
     weights = new_weights(shape=[num_inputs, num_outputs])
@@ -241,73 +260,76 @@ def new_fc_layer(input,          # The previous layer.
 
     return layer
 
+
 weights = tf.Variable(tf.random_normal([n_hidden, n_classes]))
 biases = tf.Variable(tf.random_normal([n_classes]))
 
+
 def RNN(input, weights, biases):
     # unstack to get a list of 'n_steps' tensors of shape (batch_size, n_input)
-    input = tf.unstack(input, n_tracks, 1)
+    a, b, c, d = input.shape
+    input = tf.unstack(input, b, 1)
+    print(len(input))
     for k in range(len(input)):
-        input[k] = tf.unstack(input[k], n_steps, 1)
+        input[k] = tf.unstack(input[k], c, 1)
 
-    input = input[0] + input[1] + input[2]
     lstm_cell = rnn.BasicLSTMCell(n_hidden)
 
     # lstm cell output
-    outputs, states = rnn.static_rnn(lstm_cell, input, dtype=tf.float32)
-    print(len(outputs))
-    #activation_output = tf.reshape(tf.matmul(outputs[-1], weights) + biases, (batch_size, n_tracks, n_steps, n_input))
+    outputs, states = rnn.static_rnn(lstm_cell, input[0], dtype=tf.float32)
+
+    # activation_output = tf.reshape(tf.matmul(outputs[-1], weights) + biases, (batch_size, n_tracks, n_steps, n_input))
     outputs = tf.matmul(outputs[-1], weights) + biases
     return outputs, states, outputs.shape
 
-#1st LSTM layer.
-pred,states,shape = RNN(input = X,
-               weights=weights,
-               biases=biases)
 
 # First convolutional layer.
 layer_conv1, weights_conv1 = \
-    new_conv_layer(input=pred,
-                    num_input_channels=n_input,
-                    filter_size=5,
-                    num_filters=16,
-                    shapeIn = shape,
-                    use_pooling=True)
+    new_conv_layer(input=X,
+                   num_input_channels=n_input,
+                   filter_size=5,
+                   num_filters=16,
+                   use_pooling=True)
 
 # Second convolutional layer.
 layer_conv2, weights_conv2 = \
-        new_conv_layer(input=layer_conv1,
-                       num_input_channels=16,
-                       filter_size=5,
-                       num_filters=36,
-                       shapeIn=shape,
-                       use_pooling=True)
+    new_conv_layer(input=layer_conv1,
+                   num_input_channels=16,
+                   filter_size=5,
+                   num_filters=36,
+                   use_pooling=True)
+
+# 1st LSTM layer.
+layer_conv2, states, shape = RNN(input=layer_conv2,
+                                 weights=weights,
+                                 biases=biases)
 
 # Flatten layer.
 layer_flat, num_features = flatten_layer(layer_conv2)
 
 # First fully-connected layer.
 layer_fc1 = new_fc_layer(input=layer_flat,
-                             num_inputs=num_features,
-                             num_outputs=128,
-                             use_relu=True)
+                         num_inputs=num_features,
+                         num_outputs=128,
+                         use_relu=True)
 
-    # Second fully-connected layer.
+# Second fully-connected layer.
 layer_fc2 = new_fc_layer(input=layer_fc1,
-                             num_inputs=128,
-                             num_outputs=n_classes,
-                             use_relu=False)
+                         num_inputs=128,
+                         num_outputs=n_classes,
+                         use_relu=False)
 
-    # Predicted class-label.
+# Predicted class-label.
 y_pred = tf.nn.softmax(layer_fc2)
 y_pred_cls = tf.argmax(y_pred, dimension=1)
-    # Cross-entropy for the classification of each image.
-cross_entropy = \
-        tf.nn.softmax_cross_entropy_with_logits(logits=layer_fc2,
-                                                labels=y_true)
 
-    # Loss aka. cost-measure.
-    # This is the scalar value that must be minimized.
+# Cross-entropy for the classification of each image.
+cross_entropy = \
+    tf.nn.softmax_cross_entropy_with_logits(logits=layer_fc2,
+                                            labels=y_true)
+
+# Loss aka. cost-measure.
+# This is the scalar value that must be minimized.
 cost = tf.reduce_mean(cross_entropy)
 optimizer = tf.train.AdamOptimizer(learning_rate=1e-4).minimize(cost)
 correct_prediction = tf.equal(y_pred_cls, y_true_cls)
@@ -315,10 +337,11 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 session = tf.Session()
 session.run(tf.global_variables_initializer())
-train_batch_size = 20
+train_batch_size = 50
 
 # Counter for total number of iterations performed so far.
 total_iterations = 0
+
 
 def optimize(num_iterations):
     # Ensure we update the global variable rather than a local copy.
@@ -375,6 +398,7 @@ def optimize(num_iterations):
 
     print("Testing Accuracy :", session.run(accuracy, feed_dict={X: X_tes, y_true: y_tes}))
 
-optimize(num_iterations=5000)
+
+optimize(num_iterations=2000)
 
 print("Duration :", time.time() - t)
