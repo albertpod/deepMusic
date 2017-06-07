@@ -1,4 +1,5 @@
 /.idea
 /data
+/dataset_jr
 cross_platform.py
 __pycache__/

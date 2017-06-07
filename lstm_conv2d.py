@@ -1,21 +1,10 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed May 31 11:15:17 2017
-
-@author: Theo
-"""
-
-# from __future__ import print_function
-
 import tensorflow as tf
-import joblib as jl
 from tensorflow.contrib import rnn
 import numpy as np
 import os
 import dataload
 import time
-import prettytensor as pt
-from main import loaderTrain, loaderTest
+from loader import loaderTrain, loaderTest
 
 # from tensorflow.examples.tutorials.mnist import input_data
 # mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
@@ -52,7 +41,7 @@ def toArray(X, y):
     """Turns lists X and y into arrays, only using relevant informations and a certain number of tracks and notes.
     This function selects the track that starts the latest and put the temporal starting point of gathering the input
     there.
-    Args:
+    Params:
         X: cf dataload
         y: cf dataload
     Return:
@@ -133,14 +122,14 @@ y_train = extend_y(y_train)
 # learning parameters
 learning_rate = 0.001
 epoches = 5000
-batch_size = 50  # was 100. Maybe we should try to cut the files in smaller parts in order to get more samples
+batch_size = 20  # was 100. Maybe we should try to cut the files in smaller parts in order to get more samples
 display_step = 10
 
 # network parameters
 n_input = 3  # was 1, changed it to get 3 information on each note
 n_tracks = NB_TRACKS_READ  # for now, fixed value, but will have to be changed to "None" (any value)
 n_steps = NB_NOTES_READ  # was 10
-n_hidden = 50
+n_hidden = 500
 n_classes = 2
 
 # Placeholders
@@ -184,7 +173,7 @@ def new_conv_layer(input,  # The previous layer.
     # is padded with zeroes so the size of the output is the same.
     layer = tf.nn.conv2d(input=input,
                          filter=weights,
-                         strides=[1, 1, 1, 1],
+                         strides=[1, 2, 2, 1],
                          padding='SAME')
 
     # Add the biases to the results of the convolution.
@@ -399,6 +388,6 @@ def optimize(num_iterations):
     print("Testing Accuracy :", session.run(accuracy, feed_dict={X: X_tes, y_true: y_tes}))
 
 
-optimize(num_iterations=2000)
+optimize(num_iterations=200)
 
 print("Duration :", time.time() - t)
