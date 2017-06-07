@@ -70,6 +70,41 @@ def toArray(X, y):
     return np.array([[[k for k in track[:NB_NOTES_READ]] for track in song] for song in X_train_tmp], dtype=np.float32), \
            np.array(y)[indsTrain]
 
+def toArray16(X, y):
+    """Turns lists X and y into arrays, using all tracks and NB_NOTES_READ notes.
+    This function selects the track that starts the latest and put the temporal starting point of gathering the input
+    there.
+    Params:
+        X: cf dataload
+        y: cf dataload
+    Return:
+         X: array of shape (number of songs kept, 16, NB_NOTES_READ, 3)
+         y: array of shape (number of songs kept, 1)
+    """
+    X_train_tmp = []
+    indsTrain = []
+    empty = [[-1,-1,-1] for k in range(NB_NOTES_READ)]
+    for song in X:
+        tmp = []
+        if len(song.tracks) > NB_TRACKS_READ-1:
+            song.sort_by_tick()
+            start_tick = song.tracks[0].notes[0].duration
+            for k in range(len(song.tracks)):
+                try:
+                    track = song.tracks[k]
+                    tmp_track = []
+                    if track > NB_NOTES_READ:
+                        for note in track.notes:
+                            if note.tick >= start_tick:  # TODO: make sure there are enough notes.
+                                tmp_track.append([note.note, note.tick, note.duration])
+                        tmp.append(tmp_track)
+                except:
+                    tmp.append(empty)
+            X_train_tmp.append(tmp)
+            indsTrain.append(X.index(song))
+    return np.array([[[k for k in track[:NB_NOTES_READ]] for track in song] for song in X_train_tmp], dtype=np.float32), \
+           np.array(y)[indsTrain]
+
 
 def toArray2(X, y):  # collect more batches
     X_train_tmp = []
@@ -122,7 +157,7 @@ y_train = extend_y(y_train)
 # learning parameters
 learning_rate = 0.001
 epoches = 5000
-batch_size = 20  # was 100. Maybe we should try to cut the files in smaller parts in order to get more samples
+batch_size = 50  # was 100. Maybe we should try to cut the files in smaller parts in order to get more samples
 display_step = 10
 
 # network parameters
@@ -173,12 +208,15 @@ def new_conv_layer(input,  # The previous layer.
     # is padded with zeroes so the size of the output is the same.
     layer = tf.nn.conv2d(input=input,
                          filter=weights,
-                         strides=[1, 2, 2, 1],
-                         padding='SAME')
+                         strides=[1, 1, 1, 1],
+                         padding='SAME',
+                         data_format='NCHW')
 
     # Add the biases to the results of the convolution.
     # A bias-value is added to each filter-channel.
-    layer += biases
+    layer =tf.nn.bias_add(value=layer,
+                          bias=biases,
+                          data_format='NCHW')
 
     # Use pooling to down-sample the image resolution?
     if use_pooling:
@@ -188,7 +226,8 @@ def new_conv_layer(input,  # The previous layer.
         layer = tf.nn.max_pool(value=layer,
                                ksize=[1, 2, 2, 1],
                                strides=[1, 2, 2, 1],
-                               padding='SAME')
+                               padding='SAME',
+                               data_format='NCHW')
 
     # Rectified Linear Unit (ReLU).
     # It calculates max(x, 0) for each input pixel x.
@@ -276,35 +315,43 @@ def RNN(input, weights, biases):
 layer_conv1, weights_conv1 = \
     new_conv_layer(input=X,
                    num_input_channels=n_input,
-                   filter_size=5,
-                   num_filters=16,
-                   use_pooling=True)
+                   filter_size=50,
+                   num_filters=32,
+                   use_pooling=False)
 
 # Second convolutional layer.
 layer_conv2, weights_conv2 = \
     new_conv_layer(input=layer_conv1,
-                   num_input_channels=16,
+                   num_input_channels=32,
+                   filter_size=20,
+                   num_filters=64,
+                   use_pooling=False)
+
+# Third convolutional layer.
+layer_conv3, weights_conv3 = \
+    new_conv_layer(input=layer_conv2,
+                   num_input_channels=64,
                    filter_size=5,
-                   num_filters=36,
-                   use_pooling=True)
+                   num_filters=128,
+                   use_pooling=False)
 
 # 1st LSTM layer.
-layer_conv2, states, shape = RNN(input=layer_conv2,
-                                 weights=weights,
-                                 biases=biases)
+layer_lstm, states, shape = RNN(input=layer_conv3,
+                                weights=weights,
+                                biases=biases)
 
 # Flatten layer.
-layer_flat, num_features = flatten_layer(layer_conv2)
+layer_flat, num_features = flatten_layer(layer_lstm)
 
 # First fully-connected layer.
 layer_fc1 = new_fc_layer(input=layer_flat,
                          num_inputs=num_features,
-                         num_outputs=128,
+                         num_outputs=256,
                          use_relu=True)
 
 # Second fully-connected layer.
 layer_fc2 = new_fc_layer(input=layer_fc1,
-                         num_inputs=128,
+                         num_inputs=256,
                          num_outputs=n_classes,
                          use_relu=False)
 
@@ -326,7 +373,7 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 session = tf.Session()
 session.run(tf.global_variables_initializer())
-train_batch_size = 50
+train_batch_size = batch_size
 
 # Counter for total number of iterations performed so far.
 total_iterations = 0
@@ -388,6 +435,6 @@ def optimize(num_iterations):
     print("Testing Accuracy :", session.run(accuracy, feed_dict={X: X_tes, y_true: y_tes}))
 
 
-optimize(num_iterations=200)
+optimize(num_iterations=2000)
 
 print("Duration :", time.time() - t)

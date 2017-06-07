@@ -15,7 +15,7 @@ import os
 import dataload
 import time
 import prettytensor as pt
-from main import loaderTrain, loaderTest
+from loader import loaderTrain, loaderTest
 
 # from tensorflow.examples.tutorials.mnist import input_data
 # mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
@@ -155,15 +155,11 @@ with pt.defaults_scope(activation_fn=tf.nn.relu):
     y_pred, cost = x_pretty.\
         conv2d(kernel=20, depth=16, name='layer_conv1').\
         max_pool(kernel=2, stride=2).\
-        dropout(0.9).\
-        conv2d(kernel=10, depth=36, name='layer_conv2').\
-        max_pool(kernel=2, stride=2). \
-        conv2d(kernel=5, depth=64, name='layer_conv3'). \
-        max_pool(kernel=2, stride=2). \
-        conv2d(kernel=5, depth=128, name='layer_conv4'). \
-        max_pool(kernel=2, stride=2). \
+        conv2d(kernel=10, depth=32, name='layer_conv2').\
+        max_pool(kernel=2, stride=2).\
+        dropout(0.9). \
         flatten().\
-        fully_connected(size=128, name='layer_fc1').\
+        fully_connected(size=32, name='layer_fc1').\
         softmax_classifier(num_classes=n_classes, labels=y_true)
 
     y_pred_cls = tf.argmax(y_pred, dimension=1)
@@ -236,6 +232,6 @@ def optimize(num_iterations):
     print("Testing Accuracy :", session.run(accuracy, feed_dict={X: X_tes, y_true: y_tes}))
 
 
-optimize(num_iterations=2000)
+optimize(num_iterations=3000)
 
 print("Duration :", time.time() - t)
