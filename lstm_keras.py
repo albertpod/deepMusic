@@ -4,10 +4,10 @@ import numpy as np
 import os
 import dataload
 import time
-from loader2 import loaderTrain, loaderTest
+from loader import loaderTrain, loaderTest
 import keras as keras
-from keras.models import Sequential
-from keras.layers import Dense,Activation,LSTM,Conv2D,Flatten
+from keras.models import Sequential,Model
+from keras.layers import Dense,Activation,LSTM,Conv1D,Conv2D,Flatten,Embedding,Reshape,Input,ConvLSTM2D
 
 # from tensorflow.examples.tutorials.mnist import input_data
 # mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
@@ -72,6 +72,7 @@ def toArray(X, y):
                 indsTrain.append(X.index(song))
     return np.array([[[k for k in track[:NB_NOTES_READ]] for track in song] for song in X_train_tmp], dtype=np.float32), \
            np.array(y)[indsTrain]
+
 
 def toArray16(X, y):
     """Turns lists X and y into arrays, using all tracks and NB_NOTES_READ notes.
@@ -141,20 +142,45 @@ def toArray2(X, y):  # collect more batches
     return np.array([[[k for k in track[:NB_NOTES_READ]] for track in song] for song in X_train_tmp], dtype=np.float32), \
            np.array(y)[indsTrain]
 
+def toArrayTracks(X,y):
+    """Turns lists X and y into arrays, only using relevant informations and a certain number of tracks and notes.
+        This function selects the track that starts the latest and put the temporal starting point of gathering the input
+        there. This function returns each track separately.
+        Params:
+            X: cf dataload
+            y: cf dataload
+        Return:
+             (X1,X2,X3): array of shape (number of songs kept, NB_NOTES_READ, 3)
+             y: array of shape (number of songs kept, 1)
+        """
+    X_train_tmp = []
+    indsTrain = []
+    for song in X:
+        tmp = []
+        cmpt = 0
+        if len(song.tracks) > 2:
+            song.sort_by_tick()
+            start_tick = song.tracks[0].notes[0].duration
+            for track in song.tracks:
+                tmp_track = []
+                if track > NB_NOTES_READ and cmpt < 3:
+                    for note in track.notes:
+                        if note.tick >= start_tick:
+                            tmp_track.append([note.note, note.tick, note.duration])
+                    cmpt += 1
+                    tmp.append(tmp_track)
+            if cmpt == NB_TRACKS_READ:
+                X_train_tmp.append(tmp)
+                indsTrain.append(X.index(song))
+    return np.array([[k for k in song[0][:NB_NOTES_READ]] for song in X_train_tmp], dtype=np.float32), \
+           np.array([[k for k in song[1][:NB_NOTES_READ]] for song in X_train_tmp], dtype=np.float32), \
+           np.array([[k for k in song[2][:NB_NOTES_READ]] for song in X_train_tmp], dtype=np.float32), \
+           np.array(y)[indsTrain]
 
-X_train, y_train = toArray(X_train, y_train)
-X_test, y_test = toArray(X_test, y_test)
 
-print("X_train.shape : {0}\nX_test.shape : {1}".format(X_train.shape, X_test.shape))
-print("y_train.shape : {0}\ny_test.shape : {1}".format(y_train.shape, y_test.shape))
+'''X_train, y_train = toArray(X_train, y_train)
+X_test, y_test = toArray(X_test, y_test)'''
 
-""" useless for our data
-indsTrain = np.where(np.isnan(X_train))
-indsTest= np.where(np.isnan(X_test))
-colMainTrain, colMainTest = np.nanmean(X_train, axis=0), np.nanmean(X_test, axis=0)
-X_train[indsTrain] = np.take(colMainTrain, indsTrain[1])
-X_test[indsTest] = np.take(colMainTest, indsTest[1])
-"""
 # y_test = extend_y(y_test)    # not in Keras
 # y_train = extend_y(y_train)
 # y_train, y_test = np.array(y_train),np.array(y_test)
@@ -174,18 +200,69 @@ n_classes = 2
 
 # Keras implementation
 # Model definition
+'''
 model = Sequential([
-    Conv2D(32,(3,3), activation='relu', input_shape=(3,500,3)),
+    Conv2D(32, (3,3), activation='relu', input_shape=(3, 500, 3)),
+    LSTM(128),
     Flatten(),
-    Dense(1,activation="softmax"),
-])
+    Dense(256, activation='relu'),
+    Dense(1, activation="softmax"),
+]
+'''
 
-# Choice of optimize, loss and metrics
-model.compile(optimizer='rmsprop',
+# This model divides songs into 3 tracks and performs Conv1D on each track, then LSTM. Does not provide good results...
+X_train1, X_train2, X_train3, y_train = toArrayTracks(X_train, y_train)
+X_test1 , X_test2, X_test3, y_test = toArrayTracks(X_test, y_test)
+
+print("X_train.shape : {0}\nX_test.shape : {1}".format(X_train1.shape, X_test1.shape))
+print("y_train.shape : {0}\ny_test.shape : {1}".format(y_train.shape, y_test.shape))
+
+input1 = Input(shape=(500,3,), dtype='float32', name='input1')
+input2 = Input(shape=(500,3,), dtype='float32', name='input2')
+input3 = Input(shape=(500,3,), dtype='float32', name='input3')
+
+ins = [input1,input2,input3]
+
+for k in range(3):   # For each track, performs the following structure
+    ins[k] = Conv1D(64, 6, activation="relu")(ins[k])
+    ins[k] = Conv1D(128, 3, activation="relu")(ins[k])
+    ins[k] = LSTM(64, return_sequences=True)(ins[k])
+    ins[k] = Conv1D(64, 6, activation="relu")(ins[k])
+    ins[k] = Conv1D(128, 3, activation="relu")(ins[k])
+    ins[k] = LSTM(128)(ins[k])
+
+# Merges the tracks
+x = keras.layers.concatenate(ins)
+
+# Dense (aka Fully connected) 3 times in a row
+for k in range(3):
+    x = Dense(128,activation='relu')(x)
+
+# Output
+main_output = Dense(1,activation="softmax",name="main_output")(x)
+
+# Writing the model
+model = Model(inputs=[input1, input2, input3], outputs=[main_output])
+
+# Custom optimizer
+sgd = keras.optimizers.SGD(lr=0.1, decay=1e-6, momentum=1.9)
+
+# Choice of optimizer, loss and metrics
+model.compile(optimizer=sgd,
               loss='binary_crossentropy',
               metrics=['accuracy'])
 
-# Training
-model.fit(X_train, y_train, epochs=100, batch_size=50)
+# Training for track by track conv1D
+model.fit([X_train1, X_train2, X_train3], y_train, epochs=20, batch_size=50)
 
-print("Duration :", time.time() - t)
+# Training
+# model.fit(X_train, y_train, epochs=20, batch_size=50)
+
+# Testing for track by track conv1D
+score = model.evaluate([X_test1,X_test2,X_test3], y_test, batch_size=32)
+
+# Testing
+#score = model.evaluate(X_test, y_test, batch_size=32)
+
+print("\nScore :", score)
+print("\nDuration :", time.time() - t)
