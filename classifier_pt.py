@@ -44,8 +44,7 @@ def extend_y(y):
 # dataset = jl.load(r'C:\Users\Theo\Desktop\ClassifierAlbert\datasetSeries.pkl')
 # X_train, X_test, y_train, y_test = dataset
 
-X_train, X_test, y_train, y_test = loaderTrain.songs[:], loaderTest.songs[:], loaderTrain.artists[
-                                                                              :], loaderTest.artists[:]
+X_train, X_test, y_train, y_test = loaderTrain.songs[:], loaderTest.songs[:], loaderTrain.artists[:], loaderTest.artists[:]
 
 
 def toArray(X, y):

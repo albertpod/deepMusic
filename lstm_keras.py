@@ -4,7 +4,7 @@ import numpy as np
 import os
 import dataload
 import time
-from loader2 import loaderTrain, loaderTest
+from loader import loaderTrain, loaderTest
 import keras as keras
 from keras.models import Sequential
 from keras.layers import Dense,Activation,LSTM,Conv2D,Flatten
@@ -175,9 +175,9 @@ n_classes = 2
 # Keras implementation
 # Model definition
 model = Sequential([
-    Conv2D(32,(3,3), activation='relu', input_shape=(3,500,3)),
+    Conv2D(32, (3, 3), activation='relu', input_shape=(3, 500, 3)),
     Flatten(),
-    Dense(1,activation="softmax"),
+    Dense(1, activation="softmax"),
 ])
 
 # Choice of optimize, loss and metrics
@@ -186,6 +186,6 @@ model.compile(optimizer='rmsprop',
               metrics=['accuracy'])
 
 # Training
-model.fit(X_train, y_train, epochs=100, batch_size=50)
+model.fit(X_train, y_train, epochs=200, batch_size=50)
 
 print("Duration :", time.time() - t)

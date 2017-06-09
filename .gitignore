@@ -3,3 +3,6 @@
 /dataset_jr
 cross_platform.py
 __pycache__/
+/data_new
+loadtest.pkl
+loadtrain.pkl

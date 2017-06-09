@@ -155,7 +155,7 @@ y_train = extend_y(y_train)
 # y_train, y_test = np.array(y_train),np.array(y_test)
 
 # learning parameters
-learning_rate = 0.001
+learning_rate = 0.0001
 epoches = 5000
 batch_size = 50  # was 100. Maybe we should try to cut the files in smaller parts in order to get more samples
 display_step = 10
@@ -164,7 +164,7 @@ display_step = 10
 n_input = 3  # was 1, changed it to get 3 information on each note
 n_tracks = NB_TRACKS_READ  # for now, fixed value, but will have to be changed to "None" (any value)
 n_steps = NB_NOTES_READ  # was 10
-n_hidden = 500
+n_hidden = 1000
 n_classes = 2
 
 # Placeholders
