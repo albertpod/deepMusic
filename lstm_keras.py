@@ -163,6 +163,7 @@ def toArrayTracks(X,y):
             start_tick = song.tracks[0].notes[0].duration
             for track in song.tracks:
                 tmp_track = []
+                print(track > NB_NOTES_READ)
                 if track > NB_NOTES_READ and cmpt < 3:
                     for note in track.notes:
                         if note.tick >= start_tick:
