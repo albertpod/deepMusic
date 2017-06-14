@@ -7,13 +7,13 @@ UDP_PORT_SEND = 3002
 UDP_PORT_RECIEVE = 3001
 sock = sc.socket(sc.AF_INET, sc.SOCK_DGRAM)
 
-params =  {'epoches': 0,
-           'batch_size': 0,
-           'n_hidden_lstm1': 0,
-           'n_hidden_lstm2': 0,
-           'n_dropout1': 0,
-           'n_dropout2': 0,
-           'n_dense': 0}
+params =  {'epoches': 10,
+           'batch_size': 100,
+           'n_hidden_lstm1': 64,
+           'n_hidden_lstm2': 64,
+           'n_dropout1': 0.5,
+           'n_dropout2': 0.5,
+           'n_dense': 256}
 
 def send(message):
     sock.sendto(message, (UDP_IP, UDP_PORT_SEND))
@@ -31,12 +31,13 @@ def fitness(string, params):
                 params['n_dropout2'], params['n_dense'], epoches=params['epoches'])
 
 def recieveProcess():
+    print("Dataset imported")
     sock.bind((UDP_IP, UDP_PORT_RECIEVE))
     while True:
         data, addr = sock.recvfrom(1024)
         rstring = str(data, encoding='utf')
         print(rstring)
-        fitness = fitness(rstring, params)
-        send(bytes(fitness, encoding='utf'))
+        fit = fitness(rstring, params)
+        send(bytes(fit, encoding='utf'))
 
 recieveProcess()
