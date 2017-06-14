@@ -21,11 +21,13 @@ def send(message):
 def fitness(string, params):
     rtree = ET.ElementTree(ET.fromstring(string))
     root = rtree.getroot()
-    for param, subroot in zip(params, root):
-        if param.find('n_dropout') != -1:
-            params[param] = float(subroot.find(param).text)/10
-        else:
-            params[param] = int(subroot.find(param).text)
+    for subroot in root:
+        for param in params:
+            if param.find('n_dropout') != -1:
+                params[param] = float(subroot.find(param).text)/10
+            else:
+                params[param] = int(subroot.find(param).text)
+            print(params[param])
     return lstm(params['batch_size'], params['n_hidden_lstm1'],
                 params['n_hidden_lstm2'], params['n_dropout1'],
                 params['n_dropout2'], params['n_dense'], epoches=params['epoches'])
