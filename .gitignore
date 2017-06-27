@@ -1,8 +1,15 @@
 /.idea
 /data
 /dataset_jr
-cross_platform.py
+/jSymbolic2
 __pycache__/
 /data_new
+cross_platform.py
 loadtest.pkl
 loadtrain.pkl
+rapjazz
+XGBoost.py
+loadtesthex.pkl
+loadtrainhex.pkl
+xbgclf.pkl
+set.pkl

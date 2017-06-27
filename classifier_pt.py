@@ -44,7 +44,8 @@ def extend_y(y):
 # dataset = jl.load(r'C:\Users\Theo\Desktop\ClassifierAlbert\datasetSeries.pkl')
 # X_train, X_test, y_train, y_test = dataset
 
-X_train, X_test, y_train, y_test = loaderTrain.songs[:], loaderTest.songs[:], loaderTrain.artists[:], loaderTest.artists[:]
+X_train, X_test, y_train, y_test = loaderTrain.songs[:], loaderTest.songs[:], loaderTrain.artists[
+                                                                              :], loaderTest.artists[:]
 
 
 def toArray(X, y):
@@ -77,8 +78,8 @@ def toArray(X, y):
             if cmpt == NB_TRACKS_READ:
                 X_train_tmp.append(tmp)
                 indsTrain.append(X.index(song))
-    return np.array([[[k for k in track[:NB_NOTES_READ]] for track in song] for song in X_train_tmp], dtype=np.float32), \
-           np.array(y)[indsTrain]
+    return np.array([[[k for k in track[:NB_NOTES_READ]] for track in song] for song in X_train_tmp],
+                    dtype=np.float32), np.array(y)[indsTrain]
 
 
 def toArray2(X, y):  # collect more batches
@@ -108,8 +109,8 @@ def toArray2(X, y):  # collect more batches
                 if cmpt2 == NB_TRACKS_READ:
                     X_train_tmp.append(tmp2)
                     indsTrain.append(X.index(song))
-    return np.array([[[k for k in track[:NB_NOTES_READ]] for track in song] for song in X_train_tmp], dtype=np.float32), \
-           np.array(y)[indsTrain]
+    return np.array([[[k for k in track[:NB_NOTES_READ]] for track in song] for song in X_train_tmp],
+                    dtype=np.float32), np.array(y)[indsTrain]
 
 
 X_train, y_train = toArray(X_train, y_train)
@@ -118,13 +119,6 @@ X_test, y_test = toArray(X_test, y_test)
 print("X_train.shape : {0}\nX_test.shape : {1}".format(X_train.shape, X_test.shape))
 print("y_train.shape : {0}\ny_test.shape : {1}".format(y_train.shape, y_test.shape))
 
-""" useless for our data
-indsTrain = np.where(np.isnan(X_train))
-indsTest= np.where(np.isnan(X_test))
-colMainTrain, colMainTest = np.nanmean(X_train, axis=0), np.nanmean(X_test, axis=0)
-X_train[indsTrain] = np.take(colMainTrain, indsTrain[1])
-X_test[indsTest] = np.take(colMainTest, indsTest[1])
-"""
 y_test = extend_y(y_test)
 y_train = extend_y(y_train)
 # y_train, y_test = np.array(y_train),np.array(y_test)
@@ -151,14 +145,14 @@ y_true_cls = tf.argmax(y_true, dimension=1)
 x_pretty = pt.wrap(X)
 
 with pt.defaults_scope(activation_fn=tf.nn.relu):
-    y_pred, cost = x_pretty.\
-        conv2d(kernel=20, depth=16, name='layer_conv1').\
-        max_pool(kernel=2, stride=2).\
-        conv2d(kernel=10, depth=32, name='layer_conv2').\
-        max_pool(kernel=2, stride=2).\
+    y_pred, cost = x_pretty. \
+        conv2d(kernel=20, depth=16, name='layer_conv1'). \
+        max_pool(kernel=2, stride=2). \
+        conv2d(kernel=10, depth=32, name='layer_conv2'). \
+        max_pool(kernel=2, stride=2). \
         dropout(0.9). \
-        flatten().\
-        fully_connected(size=32, name='layer_fc1').\
+        flatten(). \
+        fully_connected(size=32, name='layer_fc1'). \
         softmax_classifier(num_classes=n_classes, labels=y_true)
 
     y_pred_cls = tf.argmax(y_pred, dimension=1)

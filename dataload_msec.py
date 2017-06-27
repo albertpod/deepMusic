@@ -49,7 +49,7 @@ class DataLoad:
                         last_msg_tick = abs_tick
                         delta_msec = tempo * delta_ticks/ticks_per_beat
                         msec += delta_msec
-                        new_song.append((m, int(msec)))
+                        new_song.append(float(str(m) + '.' + str(int(msec))))
                 self.songs.append(new_song)
                 self.artists.append(artist)
             except:

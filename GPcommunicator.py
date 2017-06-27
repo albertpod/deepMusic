@@ -27,7 +27,7 @@ def fitness(string, params):
                 params[param] = float(subroot.find(param).text)/10
             else:
                 params[param] = int(subroot.find(param).text)
-            print(params[param])
+            print(param, '=', params[param])
     return lstm(params['batch_size'], params['n_hidden_lstm1'],
                 params['n_hidden_lstm2'], params['n_dropout1'],
                 params['n_dropout2'], params['n_dense'], epoches=params['epoches'])

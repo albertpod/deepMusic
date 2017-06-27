@@ -6,8 +6,8 @@ import dataload
 import time
 from loader import loaderTrain, loaderTest
 import keras as keras
-from keras.models import Sequential,Model
-from keras.layers import Dense,Activation,LSTM,Conv1D,Conv2D,Flatten,Embedding,Reshape,Input,ConvLSTM2D
+from keras.models import Sequential, Model
+from keras.layers import Dense, Activation, LSTM, Conv1D, Conv2D, Flatten, Embedding, Reshape, Input, ConvLSTM2D
 
 # from tensorflow.examples.tutorials.mnist import input_data
 # mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
@@ -218,11 +218,11 @@ X_test1 , X_test2, X_test3, y_test = toArrayTracks(X_test, y_test)
 print("X_train.shape : {0}\nX_test.shape : {1}".format(X_train1.shape, X_test1.shape))
 print("y_train.shape : {0}\ny_test.shape : {1}".format(y_train.shape, y_test.shape))
 
-input1 = Input(shape=(500,3,), dtype='float32', name='input1')
-input2 = Input(shape=(500,3,), dtype='float32', name='input2')
-input3 = Input(shape=(500,3,), dtype='float32', name='input3')
+input1 = Input(shape=(500, 3, ), dtype='float32', name='input1')
+input2 = Input(shape=(500, 3, ), dtype='float32', name='input2')
+input3 = Input(shape=(500, 3, ), dtype='float32', name='input3')
 
-ins = [input1,input2,input3]
+ins = [input1, input2, input3]
 
 for k in range(3):   # For each track, performs the following structure
     ins[k] = Conv1D(64, 6, activation="relu")(ins[k])
@@ -237,10 +237,10 @@ x = keras.layers.concatenate(ins)
 
 # Dense (aka Fully connected) 3 times in a row
 for k in range(3):
-    x = Dense(128,activation='relu')(x)
+    x = Dense(128, activation='relu')(x)
 
 # Output
-main_output = Dense(1,activation="softmax",name="main_output")(x)
+main_output = Dense(1, activation="softmax", name="main_output")(x)
 
 # Writing the model
 model = Model(inputs=[input1, input2, input3], outputs=[main_output])
