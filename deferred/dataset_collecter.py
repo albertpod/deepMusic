@@ -3,7 +3,7 @@ import numpy as np
 from shutil import copyfile
 from cross_platform import delimiter
 
-dfolder = 'rapjazz'
+dfolder = 'Archive'
 
 def create_test_train_sets(split_size=.2, seed=42, d=delimiter):
     for directory in os.listdir(dfolder):

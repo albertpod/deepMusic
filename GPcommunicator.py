@@ -1,6 +1,7 @@
 import socket as sc
-from lstm_run import lstm
 import xml.etree.ElementTree as ET
+
+from deferred.lstm_run import lstm
 
 UDP_IP = '127.0.0.1'
 UDP_PORT_SEND = 3002

@@ -1,14 +1,12 @@
-import tensorflow as tf
-from tensorflow.contrib import rnn
-import numpy as np
 import os
-import dataload_hex
-import time
-from loader import loaderTrain, loaderTest
+
 import keras
-from keras.models import Sequential, Model
-from keras.layers import Dense, Activation, LSTM, Conv1D, Conv2D, Flatten, Embedding, Reshape, Input, ConvLSTM2D, \
-    TimeDistributed, Dropout
+import numpy as np
+from keras.layers import Dense, LSTM, Dropout
+from keras.models import Sequential
+
+from deferred import dataload_hex
+from deferred.loader import loaderTrain, loaderTest
 
 
 def lstm(batch_size, n_hidden_lstm1, n_hidden_lstm2, n_dropout1, n_dropout2, n_dense, epoches=20):

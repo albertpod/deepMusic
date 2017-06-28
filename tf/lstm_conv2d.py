@@ -1,10 +1,12 @@
+import os
+import time
+
+import numpy as np
 import tensorflow as tf
 from tensorflow.contrib import rnn
-import numpy as np
-import os
-import dataload
-import time
-from loader import loaderTrain, loaderTest
+
+from deferred import dataload
+from deferred.loader import loaderTrain, loaderTest
 
 # from tensorflow.examples.tutorials.mnist import input_data
 # mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)

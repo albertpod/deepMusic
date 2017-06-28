@@ -1,8 +1,9 @@
-from cross_platform import delimiter, directory
-import dataload_msec as dataload
 from pathlib import Path
+
 import joblib as jl
-import os
+
+from cross_platform import delimiter
+from deferred import dataload_msec as dataload
 
 
 def load_set(type, d=delimiter):

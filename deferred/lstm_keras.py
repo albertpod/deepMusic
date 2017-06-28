@@ -1,13 +1,14 @@
-import tensorflow as tf
-from tensorflow.contrib import rnn
-import numpy as np
 import os
-import dataload
 import time
-from loader import loaderTrain, loaderTest
+
 import keras as keras
-from keras.models import Sequential, Model
-from keras.layers import Dense, Activation, LSTM, Conv1D, Conv2D, Flatten, Embedding, Reshape, Input, ConvLSTM2D
+import numpy as np
+import tensorflow as tf
+from keras.layers import Dense, LSTM, Conv1D, Input
+from keras.models import Model
+
+from deferred import dataload
+from deferred.loader import loaderTrain, loaderTest
 
 # from tensorflow.examples.tutorials.mnist import input_data
 # mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)

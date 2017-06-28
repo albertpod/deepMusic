@@ -3,9 +3,10 @@ We create the dataset : import songs from a folder, turn them into songstruct, a
 """
 
 import os
-import midiconnector
 
-MIN_SIZE = 500  # FIXME: to change
+import mido
+
+MIN_SIZE = 1000  # FIXME: to change
 
 
 class DataLoad:
@@ -29,9 +30,15 @@ class DataLoad:
 
         for file in os.listdir():
             try:
-                print(file)
-                new_song = midiconnector.MidiConnector.load_file(file)
-                assert max(new_song.tracks) > 500
+                new_midi = mido.MidiFile(file)
+                new_song = []
+                tmp = []
+                for msg in new_midi:
+                    abs_tick = 0
+                    if (not msg.is_meta) and (msg.type != "sysex") and (len(msg) == 3):
+                        m = msg.bytes()
+                        m.append(msg.time)     # is this a good idea ?
+                        new_song.append(m)
                 self.songs.append(new_song)
                 self.artists.append(artist)
             except:

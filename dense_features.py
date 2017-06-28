@@ -1,18 +1,18 @@
-import tensorflow as tf
-from tensorflow.contrib import rnn
-import numpy as np
 import os
-import dataload_hex
 import time
-import keras
-from keras.models import Sequential, Model
-from keras.layers import Dense, Activation, LSTM, Conv1D, Conv2D, Flatten, Embedding, Reshape, Input, ConvLSTM2D, \
-    TimeDistributed, Dropout, MaxPooling1D, GlobalAveragePooling1D
 import xml.etree.ElementTree as ET
+
+import keras
 import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
+from keras.layers import Dense, Dropout
+from keras.models import Sequential
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import accuracy_score, precision_score
 from sklearn.preprocessing import StandardScaler
+
+from deferred import dataload_hex
 
 NB_NOTES_READ = dataload_hex.MIN_SIZE
 

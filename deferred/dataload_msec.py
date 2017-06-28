@@ -3,8 +3,8 @@ We create the dataset : import songs from a folder, turn them into songstruct, a
 """
 
 import os
+
 import mido
-import midiconnector
 
 MIN_SIZE = 500  # FIXME: to change
 

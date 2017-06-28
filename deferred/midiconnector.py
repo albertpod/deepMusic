@@ -19,7 +19,7 @@ Mid-level interface for the python files
 
 import mido  # Midi lib
 
-import songstruct as music
+from deferred import songstruct as music
 
 
 class MidiInvalidException(Exception):
