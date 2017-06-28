@@ -4,6 +4,8 @@
 /jSymbolic2
 __pycache__/
 /data_new
+/models
+/plot
 cross_platform.py
 loadtest.pkl
 loadtrain.pkl
