@@ -1,9 +1,11 @@
 import os
 import time
 import xml.etree.ElementTree as ET
-
 import keras
 import matplotlib.pyplot as plt
+from matplotlib import offsetbox
+import matplotlib.patheffects as PathEffects
+import seaborn as sns
 import numpy as np
 import tensorflow as tf
 from keras.layers import Dense, Dropout
@@ -11,8 +13,10 @@ from keras.models import Sequential
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import accuracy_score, precision_score
 from sklearn.preprocessing import StandardScaler
-
+from sklearn.manifold import TSNE
 from deferred import dataload_hex
+from sklearn import datasets
+#from XGBoost import run_XGBoost
 
 NB_NOTES_READ = dataload_hex.MIN_SIZE
 
@@ -77,7 +81,6 @@ def data_process(X_train1, X_train2, X_test1, X_test2):
 
 X_train, X_test, y_train, y_test = data_process(X_train1, X_train2, X_test1, X_test2)
 
-
 # GBM
 def call_GMB():
     clf = GradientBoostingClassifier()
@@ -90,6 +93,40 @@ def call_GMB():
     print("X_train.shape : {0}\nX_test.shape : {1}".format(X_train.shape, X_test.shape))
     print("y_train.shape : {0}\ny_test.shape : {1}".format(y_train.shape, y_test.shape))
 
+def tSNE(X, y, labels):
+    model = TSNE(n_components=3, random_state=42)
+    '''suppress printing of small floating point values 
+       using scientific notation'''
+    np.set_printoptions(suppress=True)
+    tX = model.fit_transform(X)
+    # We choose a color palette with seaborn.
+    palette = np.array(sns.color_palette("hls", 2))
+
+    # We create a scatter plot.
+    f = plt.figure(figsize=(8, 8))
+    ax = plt.subplot(aspect='equal')
+    sc = ax.scatter(tX[:, 0], tX[:, 1], lw=0, s=40,
+                    c=palette[y.astype(np.int)])
+    plt.xlim(-25, 25)
+    plt.ylim(-25, 25)
+    ax.axis('off')
+    ax.axis('tight')
+
+    # We add the labels for each digit.
+    txts = []
+    for label in labels:
+        # Position of each label.
+        g = tX[y == labels.index(label), :]
+        xtext, ytext = np.median(tX[y == labels.index(label), :], axis=0)
+        txt = ax.text(xtext, ytext, label, fontsize=24)
+        txt.set_path_effects([
+            PathEffects.Stroke(linewidth=5, foreground="w"),
+            PathEffects.Normal()])
+        txts.append(txt)
+    plt.show()
+    return f, ax, sc, txts
+
+tSNE(X_train, y_train, ['jazz', 'rap'])
 #call_GMB()
 
 # learning parameters
