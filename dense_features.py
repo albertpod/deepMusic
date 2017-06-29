@@ -95,8 +95,6 @@ def call_GMB():
 
 def tSNE(X, y, labels):
     model = TSNE(n_components=3, random_state=42)
-    '''suppress printing of small floating point values 
-       using scientific notation'''
     np.set_printoptions(suppress=True)
     tX = model.fit_transform(X)
     # We choose a color palette with seaborn.
