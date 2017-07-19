@@ -1,6 +1,7 @@
 import random
 
 import numpy as np
+import fitness as fit
 from musicGeneration import data
 from musicGraph import *
 segment_size = 3
@@ -21,10 +22,10 @@ def mutate(individual, probability=0.05):
     return individual
 
 
-def crossover(ind_f, ind_s, min_size = 12):
+def crossover(ind_f, ind_s, min_size=12):
     child = []
     xover_f, xover_s = 0, len(ind_s)
-    while (xover_f + (len(ind_s) - xover_s) < min_size):
+    while xover_f + (len(ind_s) - xover_s) < min_size:
         xover_f = random.randint(0, len(ind_f))
         xover_f_seg = xover_f % segment_size
 
@@ -32,7 +33,7 @@ def crossover(ind_f, ind_s, min_size = 12):
         xover_s_seg = xover_s % segment_size
 
         xover_s += (xover_f_seg - xover_s_seg)
-        if (xover_s >= len(ind_s)):
+        if xover_s >= len(ind_s):
             xover_s -= segment_size
 
     for i in range(0, xover_f): child.append(ind_f[i])
@@ -52,26 +53,22 @@ def create_population(amount):
     return dump
 
 
-def elitism(ancestors, proportion=0.2):
-    f_pop = []
+def elitism(ancestors, f_pop, proportion=0.2):
+    """f_pop = []
     for individual in ancestors:
-        f_pop.append(fitness(individual))
+        f_pop.append(fitness(individual))"""
     elected = [ANCESTORS for (F_POP, ANCESTORS) in sorted(zip(f_pop, ancestors), reverse=True)]
-    return elected[:int(len(elected)*proportion)]
-
-
-def fitness(individual):
-    return random.randrange(100)
+    return elected[:int(len(elected)*proportion)], sorted(f_pop, reverse=True)[:int(len(elected)*proportion)]
 
 
 def get_statistics(population):
     best, best_f, worst_f, mean_f, best_size = None, 0, 100, 0, 0
     for individual in population:
-        f_ind = fitness(individual)
+        f_ind = [0] # fitness(individual) TODO: use fitness
         if f_ind > best_f:
             best = individual
             best_f = f_ind
-            best_size = len(f_ind)
+            best_size = len(f_ind)  # Im not sure about this
         if f_ind < worst_f:
             worst_f = f_ind
         mean_f += f_ind
@@ -79,19 +76,18 @@ def get_statistics(population):
     print(best, best_f, worst_f, mean_f, best_size)
 
 
-def evolve(population, generations = 100):
+def evolve(population, f_pop, generations=100):
     for i in range(generations):
-        new_population = []
-        new_population = elitism(population)
+        new_population, new_f_pop = elitism(population, f_pop)
         tmp = new_population[:]
-        for i in range(len(tmp)):
+        for k in range(len(tmp), 100):
             parents = random.sample(tmp, 2)
             # crossover
             new_population.append(crossover(parents[0], parents[1]))
             # mutation
-        ind_id = random.randint(0, len(new_population) - 1)
-        new_population[ind_id] = crossover(new_population[ind_id])
-        population = new_population
+            new_population[k] = mutate(new_population[k])
+        population = new_population[:]
+    return population
 
 
-best = elitism(create_population(100))
+#best = elitism(create_population(100))

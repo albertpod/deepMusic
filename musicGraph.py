@@ -35,8 +35,11 @@ class MusicGraph(nx.DiGraph):
 
         # private
         self._inputs = inputs
-        if outputs is not None:self._outputs = outputs
-        else:self._outputs= []
+        if outputs is not None:
+            self._outputs = outputs
+            nx.set_node_attributes(self, "parents", [])
+        else:
+            self._outputs= []
         self._nodes_priority = []
 
         self.add_nodes_from(inputs)
@@ -59,6 +62,7 @@ class MusicGraph(nx.DiGraph):
             # no output node can be an input for another output node
             if str(self._nodes_priority[index]).find("output") != -1:
                 in_pair = random.sample(self._nodes_priority[:len(self._nodes_priority) - len(self._outputs)], 2)
+                self.node[str(self._nodes_priority[index])]["parents"] = in_pair
             elif self.node[self._nodes_priority[index]]["binary"]:
                 in_pair = random.sample(self._nodes_priority[:index], 2)
             else:
@@ -142,9 +146,9 @@ class MusicGraph(nx.DiGraph):
             gene = genes[gene_id]
             if node_id >= nb_nodes - nb_out:
                 type = "output"
-                self.add_node(gene, {}.copy())
-                self._outputs.append(gene)
-                compt += 1
+                self.add_node("output%s" % compt, {}.copy())
+                self._outputs.append("output%s" % compt)
+                self.node["output%s" % compt]["parents"] = []
             else:
                 type = node_types[gene % len(node_types)]
                 dic = {"name": type, "binary": False if type.find('UNARY') != -1 else True}.copy()
@@ -165,14 +169,32 @@ class MusicGraph(nx.DiGraph):
                 else:
                     input_id = gene_in % eligible_node
                 if node_id >= nb_nodes - nb_out:
-                    self.add_path([input_id, gene])
+                    self.add_path([input_id, "output%s" % compt])
+                    self.node["output%s" % compt]["parents"].append(input_id)
                 else:
+                    if input_id == node_id:
+                        input_id = random.choice(inputs)  #FIXME : not a good way to do this, we should avoid random
                     self.add_path([input_id, node_id])
-                if input_id == node_id:
-                    print(node_id)
 
-        #nx.topological_sort(self)
-        return self.node, self.edge
+            if node_id >= nb_nodes - nb_out:  # for output nodes
+                self.node["output%s" % compt]["values"] = []
+                compt += 1
+            else:
+                self.node[node_id]["values"] = []
+
+        sorted = nx.topological_sort(self)
+        for node in sorted:
+            pred = self.predecessors(node)
+            if node in self._outputs:
+                pred = self.node[node]["parents"][:]
+            if len(pred) == 1:
+                try:
+                    self.__compute_nodes(node, pred[0])
+                except:  # in some cases, one node has only one node that is both its parents, so we use it twice
+                    self.__compute_nodes(node, pred[0], pred[0])
+            elif len(pred) == 2:
+                self.__compute_nodes(node, pred[0], pred[1])
+
 
     def to_array(self):
         array = []
@@ -191,18 +213,23 @@ class MusicGraph(nx.DiGraph):
                         pred[k] = new_node_id[pred[k]]
                 r += pred
                 if len(r) == 2:
-                    r += [0]
+                    r += pred
                 array += r
         i = 0
         for node in self._outputs:
             i += 1
-            r = ['output%s' % i]
-            r += self.predecessors(node)
+            r = [random.randint(0, len(node_types)-1)]
+            pred = self.predecessors(node)
+            if node in self._outputs:
+                pred = self.node[node]["parents"]
+            for k in range(len(pred)):
+                if pred[k] in new_node_id.keys():
+                    pred[k] = new_node_id[pred[k]]
+            r += pred
+            if len(r) == 2:  # security, in case the two parents are the same
+                r += pred
             array += r
         return array
-
-    def __gt__(self, other):
-        return False
 
     def pos_nodes(self):
         """ Assign a position for each node for further plotting """
@@ -272,16 +299,15 @@ def output(args):
 
     return note, velocity
 
-G = MusicGraph(inputs={"X": [0, 1, 1], "Y": [0, 1, 1], "Z": [0, 1, 1], "beat": [0, 1, 1], "bar": [0, 1, 1]},
+G = MusicGraph(inputs={"X": [0, 1, 1], "Y": [0, 2, 1], "Z": [0, 3, 1], "beat": [0, 4, 1], "bar": [0, 5, 1]},
                outputs=["output1", "output2", "output3"],
                internal_nodes_n=20, connect=True)
 
 array = G.to_array()
 
-G2 = MusicGraph(inputs={"X": [0, 1, 1], "Y": [0, 1, 1], "Z": [0, 1, 1], "beat": [0, 1, 1], "bar": [0, 1, 1]},
+G2 = MusicGraph(inputs={"X": [0, 1, 1], "Y": [0, 2, 1], "Z": [0, 3, 1], "beat": [0, 4, 1], "bar": [0, 5, 1]},
                 # outputs=["output1", "output2", "output3"],
                 internal_nodes_n=0, connect=False)
 
 G2.array_to_graph(array)
-
 array2 = G2.to_array()

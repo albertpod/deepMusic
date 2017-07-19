@@ -23,7 +23,7 @@ class Piece:
         # time signature, beats per bar
         self.signature = _signature
 
-        self.filename = "data/%s_%d_%d.txyz" % (self.sections,
+        self.filename = "schema/%s_%d_%d.txyz" % (self.sections,
                                                 self.signature,
                                                 self.section_length)
 

@@ -1,11 +1,15 @@
 import csv
-
+import os
 import matplotlib.pyplot as pl
 import mido
 import musicGraph
 import networkx
 
 nb_out = musicGraph.nb_out
+
+f = [file for file in os.listdir("midifiles") if file.endswith(".mid")]
+for file in f:
+    os.remove("midifiles/"+file)
 
 
 def run(times, curves):
@@ -47,8 +51,15 @@ def parse_xyz(filename):
                 out[k].append(float(row[k]))
     return out
 
+data = parse_xyz('schema/AABA_3_4.txyz')
 
-def runFromData(data, music_graph=None):
+t = data[:][0]  # bar
+b = data[:][1]  # beat
+x = data[:][2]
+y = data[:][3]
+z = data[:][4]
+
+def runFromData(data=data, music_graph=None, cmpt=0):
     """
     Generates a MIDI file given time and data array
     :param music_graph: graph that will be run
@@ -62,11 +73,7 @@ def runFromData(data, music_graph=None):
     results = [[[0 for i in range(len(data))] for k in range(2)] for j in range(nb_out)]
     if music_graph is None:
 
-        t = data[:][0]  # bar
-        b = data[:][1]  # beat
-        x = data[:][2]
-        y = data[:][3]
-        z = data[:][4]
+
         curves = [x, y, z]
         times = [t, b]
         mg = musicGraph.MusicGraph({"X": x, "Y": y, "Z": z, "beat": b, "bar": t},
@@ -152,6 +159,8 @@ def runFromData(data, music_graph=None):
             new_track.append(message)
 
         mid.tracks.append(new_track)
-    mid.save("test.mid")
-
-data = parse_xyz('data/AABA_3_4.txyz')
+    if len(mid.tracks[0]) + len(mid.tracks[1]) + len(mid.tracks[2]) != 3:
+        mid.save("midifiles/test%s.mid" % cmpt)
+        return True
+    else:
+        return False

@@ -6,8 +6,9 @@ import xml.etree.ElementTree as ET
 def get_features(midi):
     """function creates feature_values.xml file which contains features for subsequent parsing """
     # after calling this function jSymbolic will create 3 useless (in our case) files
-    subprocess.call(['java', '-Xmx3048m', '-jar', 'jSymbolic2/dist/jSymbolic2.jar', midi,
-                     'feature_values.xml', 'feature_descriptions.xml'])
+    FNULL = open(os.devnull, 'w')
+    subprocess.call(['java', '-Xmx1048m', '-jar', 'jSymbolic2/dist/jSymbolic2.jar', midi,
+                     'feature_values.xml', 'feature_descriptions.xml'], stdout=FNULL, stderr=subprocess.STDOUT)
 
     # jSymbolic can create csv of arff files if some special features are extracted, it is not the case here
     files = ['feature_descriptions.xml']
@@ -17,9 +18,10 @@ def get_features(midi):
 
     features = []
     for song in X[1:]:  # remove the header
+        feat = []
         for feature in song[1:]:  # remove the header
-            features.append(float(feature[1].text.replace(',', '.')))  # commas in XML files have to be turned into dot
-
+            feat.append(float(feature[1].text.replace(',', '.')))  # commas in XML files have to be turned into dot
+        features.append(feat)
     os.remove('feature_values.xml')
 
     # since there is only one song to extract, the output is just a list of the values of the features

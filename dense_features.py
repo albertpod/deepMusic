@@ -26,17 +26,17 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 print('TensorFlow version: {0}'.format(tf.__version__))
 
 t = time.time()
-N_CLASSES = 4
-
+N_CLASSES = 2
+CLASSES = ["jazz", "rap", "rock", "blues"]
 
 X1 = ET.parse(
-    r"jSymbolic2\features\extracted_feature_values_jazz.xml").getroot()
-X2 = ET.parse(
-    r"jSymbolic2\features\extracted_feature_values_rap.xml").getroot()
-X3 = ET.parse(
     r"jSymbolic2\features\extracted_feature_values_rock.xml").getroot()
+X2 = ET.parse(
+    r"jSymbolic2\features\extracted_feature_values_train_noise.xml").getroot()
+X3 = ET.parse(
+    r"jSymbolic2\features\extracted_feature_values_jazz.xml").getroot()
 X4 = ET.parse(
-    r"jSymbolic2\features\extracted_feature_values_blues.xml").getroot()
+    r"jSymbolic2\features\extracted_feature_values_rap.xml").getroot()
 
 print("XML files parsed")
 
@@ -50,24 +50,29 @@ def parse(X, y):
         out.append(features)
     return out, [y for k in range(len(X[1:]))]
 
-
-def data_process(X1, X2, X3=None, X4=None):
+def get_data(X1, X2, X3=None, X4=None):
     xt1, yt1 = parse(X1, 0)
     xt2, yt2 = parse(X2, 1)
     xt3, yt3, xt4, yt4 = None, None, None, None
-    if X3!=None:
-        xt3, yt3 = parse(X3,2)
-    if X4!=None:
-        xt4, yt4 = parse(X4,3)
+    if X3 != None:
+        xt3, yt3 = parse(X3, 2)
+    if X4 != None:
+        xt4, yt4 = parse(X4, 3)
 
-    X_tot = np.concatenate(tuple((k for k in (xt1, xt2, xt3, xt4) if k != None)))
-    y_tot = np.concatenate(tuple((k for k in (yt1, yt2, yt3, yt4) if k != None)))
+    X_tot = np.concatenate(tuple((k for k in (xt1, xt2, xt3, xt4) if k is not None)))
+    y_tot = np.concatenate(tuple((k for k in (yt1, yt2, yt3, yt4) if k is not None)))
+    return X_tot, y_tot
 
     # Standardization
-    def standardize(X):
-        scaler = StandardScaler().fit(X)
-        rescaled = scaler.transform(X)
-        return rescaled
+def standardize(X):
+    scaler = StandardScaler().fit(X)
+    rescaled = scaler.transform(X)
+    return rescaled
+
+
+def data_process(X1, X2, X3=None, X4=None):
+
+    X_tot, y_tot = get_data(X1, X2, X3, X4)
 
     X_tot = standardize(X_tot)
 
@@ -81,7 +86,14 @@ def data_process(X1, X2, X3=None, X4=None):
 
     return X_train, X_test, y_train, y_test
 
-X_train, X_test, y_train, y_test = data_process(X1, X2, X3, X4)
+
+if N_CLASSES == 2:
+    X_train, X_test, y_train, y_test = data_process(X1, X2)
+elif N_CLASSES == 3:
+    X_train, X_test, y_train, y_test = data_process(X1, X2, X3)
+else:
+    X_train, X_test, y_train, y_test = data_process(X1, X2, X3, X4)
+
 X_tot = np.concatenate((X_test, X_train))
 y_tot = np.concatenate((y_test, y_train))
 
@@ -93,7 +105,7 @@ def call_GMB():
     y_pred = clf.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
 
-    print("GBM accuracy = ", accuracy, "Precision = ", precision_score(y_test, y_pred))
+    print("GBM accuracy = ", accuracy)
 
 print("X_train.shape : {0}\nX_test.shape : {1}".format(X_train.shape, X_test.shape))
 print("y_train.shape : {0}\ny_test.shape : {1}".format(y_train.shape, y_test.shape))
@@ -113,7 +125,7 @@ def tSNE(X, y, labels, n_dim=3):
                     c=palette[y.astype(np.int)])
     plt.xlim(-25, 25)
     plt.ylim(-25, 25)
-    #ax.axis('off')
+    # ax.axis('off')
     ax.axis('tight')
 
     # We add the labels for each digit.
@@ -131,21 +143,21 @@ def tSNE(X, y, labels, n_dim=3):
     plt.show()
     return f, ax, sc, txts
 
-tSNE(X_train, y_train, ['jazz', 'rap', 'rock', 'blues'])
-#call_GMB()
+# tSNE(X_train, y_train, CLASSES)
+# call_GMB()
 
 # learning parameters
 learning_rate = 0.001
-epoches = 10000
+epoches = 6000
 batch_size = 100
 dropout = 0.6
 dense_layers = 600
 
 
-y_train = keras.utils.to_categorical(y_train, num_classes= N_CLASSES)
-y_test = keras.utils.to_categorical(y_test, num_classes= N_CLASSES)
+y_train_cat = keras.utils.to_categorical(y_train, num_classes= N_CLASSES)
+y_test_cat = keras.utils.to_categorical(y_test, num_classes= N_CLASSES)
 
-def create_model():
+def create_model(n_classes=N_CLASSES):
     # 1st model : Dense layers
     model = Sequential([
         Dense(dense_layers, activation="relu", input_shape=(156,)),
@@ -156,7 +168,7 @@ def create_model():
         Dropout(dropout),
         Dense(300, activation="relu"),
         Dropout(dropout),
-        Dense(4, activation="sigmoid")
+        Dense(n_classes, activation="sigmoid")
     ])
     return model
 
@@ -170,10 +182,15 @@ def run_model(model, X_train, X_test, y_train, y_test, iter=0):
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
 
+    hist_test = []
+    hist1 = []
     # Training
-    hist1 = model.fit(X_train, y_train, epochs=int(epoches * 2 / 3), batch_size=batch_size, verbose=2)
-    model.optimizer.lr = tf.constant(learning_rate / 10)
-    hist2 = model.fit(X_train, y_train, epochs=int(epoches / 3), batch_size=batch_size, verbose=2)
+    for k in range(int(epoches/100)):
+        hist = model.fit(X_train, y_train, epochs=int(epoches/100), batch_size=batch_size, verbose=2)
+        hist_test.append(model.evaluate(X_test,y_test))
+        hist1.append(hist.history.get("acc")[-1])
+    # model.optimizer.lr = tf.constant(learning_rate / 10)
+    # hist2 = model.fit(X_train, y_train, epochs=int(epoches / 3), batch_size=batch_size, verbose=2)
 
     # Testing
     score = model.evaluate(X_test, y_test)
@@ -182,17 +199,107 @@ def run_model(model, X_train, X_test, y_train, y_test, iter=0):
     print("\nDuration :", time.time() - t)
 
     # Saving the model
-    model.save(r"models/dense_xml_jazz_rap_rock_blues_%.3f.h5" % score[1])
+    model.save(r"models/dense_xml_rock_blues_%.3f.h5" % score[1])
 
-    plt.plot(hist1.history.get("acc") + hist2.history.get("acc"))
+    '''plt.plot(hist1)  # + hist2.history.get("acc"))
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
     plt.axis([0, epoches, 0, 1])
-    plt.savefig(r'plot/JRRB_Dense_4layers%s_%.1fdropout_%sbatch_%.3ftest.png' % (dense_layers, dropout, batch_size, score[1]))
+    plt.savefig(r'plot/Training_JRR_Dense_4layers%s_%.1fdropout_%sbatch_%.3ftest.png' % (dense_layers, dropout, batch_size, score[1]))
+    plt.clf()'''
+    plt.plot(hist1)
+    plt.plot(hist_test)
+    plt.xlabel('Epoch/100')
+    plt.ylabel('Accuracy')
+    plt.axis([0, epoches/100, 0, 1])
+    plt.legend()
+    plt.savefig(r'plot/Testing_RockBlues_Dense_4layers%s_%.1fdropout_%sbatch_%.3ftest.png' % (dense_layers, dropout, batch_size, score[1]))
     return score[1]
 
-model = create_model()
-out = run_model(model, X_train, X_test, y_train, y_test)
+
+def one_vs_all(y_train, y_test, num_class=0):
+    ytr, yte = [], []
+    for k in range(len(y_train)):
+        ytr.append(int(y_train[k] == num_class))
+    for k in range(len(y_test)):
+        yte.append(int(y_test[k] == num_class))
+    return ytr, yte
+
+
+def run_model_one_vs_all():
+    # Custom optimizer
+    sgd = keras.optimizers.SGD(lr=learning_rate)
+
+    hist_test_tot = []
+    hist_train_tot = []
+    a = {}
+
+    for k in range(N_CLASSES):  # Create as many models as there are classes
+
+        ytr, yte = one_vs_all(y_train, y_test, num_class=k)
+
+        model = create_model(n_classes=1)  # In binary classification, we only need one output
+        # Choice of optimizer, loss and metrics
+        model.compile(optimizer=sgd,
+                  loss='binary_crossentropy',
+                  metrics=['binary_accuracy'])
+
+        hist_test = []
+        hist1 = []
+
+        # Training
+        for j in range(int(epoches/100)):
+            hist = model.fit(X_train, ytr, epochs=int(epoches/100), batch_size=batch_size, verbose=0)
+            print("%s/%s" % (j, int(epoches/100)))
+            # hist_test.append(model.evaluate(X_test, y_test))
+            hist1.append(hist.history.get("binary_accuracy")[-1])
+
+        hist_train_tot.append(hist1)
+
+        # Testing
+        score = model.evaluate(X_test, yte)
+
+        # Saving the model in the dict
+        a[k] = model
+
+        print("\nScore %s vs all : %s" % (CLASSES[k], score))
+        print("\nDuration :", time.time() - t)
+
+    # Saving the model
+    # model.save(r"models/dense_xml_jazz_rap_rock_blues_%.3f.h5" % score[1])
+
+    # Testing the model. We use "one vs all" strategy, and compare which one gives the best result in each case.
+    score = 0
+    for j in range(len(y_test)):
+        pred = []
+        for k in range(N_CLASSES):
+            pred.append(a[k].predict(X_test[j:j+1]))
+        prediction = pred.index(max(pred))
+        score += int(prediction == y_test[j])  # Adds 1 to the score if the prediction is correct
+
+    print('\n Final Score :', score/len(y_test))
+
+    # Plot accuracy for training set
+    '''plt.plot(hist1)  # + hist2.history.get("acc"))
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.axis([0, epoches, 0, 1])
+    plt.savefig(r'plot/Training_JRR_Dense_4layers%s_%.1fdropout_%sbatch_%.3ftest.png' % (dense_layers, dropout, batch_size, score[1]))
+    plt.clf()'''
+    plt.plot(hist_train_tot[0])
+    #plt.plot(hist_test)
+    plt.xlabel('Epoch/100')
+    plt.ylabel('Accuracy')
+    plt.axis([0, epoches/100, 0, 1])
+    plt.legend()
+    plt.savefig(r'plot/Testing_JRRB_Dense_4layers%s_%.1fdropout_%sbatch_%.3ftest.png' % (dense_layers, dropout, batch_size, score/len(y_test)))
+    return score
+
+if N_CLASSES == 2:
+    model = create_model()
+    out = run_model(model, X_train, X_test, y_train_cat, y_test_cat)
+else:
+    out = run_model_one_vs_all()
 
 '''if __name__ == "__main__":
     n_folds = 5
