@@ -17,7 +17,7 @@ def mutate(individual, probability=0.05):
 
     for _ in individual:
         if random.uniform(0.0, 1.0) < probability:
-            fi_gene = random.randint(0, len(individual) - 1)
+            fi_gene = random.randint(1, len(individual) - 1)
             individual[fi_gene] = random.randint(0, int(len(individual) / segment_size))
     return individual
 
@@ -26,10 +26,10 @@ def crossover(ind_f, ind_s, min_size=12):
     child = []
     xover_f, xover_s = 0, len(ind_s)
     while xover_f + (len(ind_s) - xover_s) < min_size:
-        xover_f = random.randint(0, len(ind_f))
+        xover_f = random.randint(1, len(ind_f))
         xover_f_seg = xover_f % segment_size
 
-        xover_s = random.randint(0, len(ind_s))
+        xover_s = random.randint(1, len(ind_s))
         xover_s_seg = xover_s % segment_size
 
         xover_s += (xover_f_seg - xover_s_seg)
@@ -49,7 +49,7 @@ def create_population(amount):
     for k in range(amount):
         dump.append(MusicGraph(inputs={"X": x, "Y": y, "Z": z, "beat": beat, "bar": bar},
                 outputs=["output1", "output2", "output3"],
-                internal_nodes_n=20, connect=True))
+                internal_nodes_n=40, connect=True))
     return dump
 
 
@@ -57,7 +57,7 @@ def elitism(ancestors, f_pop, proportion=0.2):
     """f_pop = []
     for individual in ancestors:
         f_pop.append(fitness(individual))"""
-    elected = [ANCESTORS for (F_POP, ANCESTORS) in sorted(zip(f_pop, ancestors), reverse=True)]
+    elected = [ANCESTORS for (F_POP, ANCESTORS) in sorted(zip(f_pop, ancestors), key=lambda x: x[0], reverse=True)]
     return elected[:int(len(elected)*proportion)], sorted(f_pop, reverse=True)[:int(len(elected)*proportion)]
 
 

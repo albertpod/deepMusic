@@ -59,6 +59,7 @@ x = data[:][2]
 y = data[:][3]
 z = data[:][4]
 
+
 def runFromData(data=data, music_graph=None, cmpt=0):
     """
     Generates a MIDI file given time and data array

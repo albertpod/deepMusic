@@ -26,11 +26,11 @@ print('TensorFlow version: {0}'.format(tf.__version__))
 X1 = ET.parse(
     r"jSymbolic2\features\extracted_feature_values_rock.xml").getroot()
 X2 = ET.parse(
-    r"jSymbolic2\features\extracted_feature_values_train_noise.xml").getroot()
+    r"jSymbolic2\features\extracted_feature_values_random.xml").getroot()
 X3 = ET.parse(
     r"jSymbolic2\features\extracted_feature_mid_test.xml").getroot()
 
-model_path ="models/dense_xml_rock_noise_1.000.h5"
+model_path ="models/dense_xml_rock_random_1.000.h5"
 
 
 def parse(X, y):
@@ -58,24 +58,19 @@ def get_data(X1, X2, X3=None, X4=None):
 
 
 # Standardization with regard to the original data is needed in order to have the same normalization
-def standardize(X):
-    scaler = StandardScaler().fit(X)
-    rescaled = scaler.transform(X)
-    return rescaled
+
+X_tot, y_tot = get_data(X1, X2)
+scaler = StandardScaler().fit(X_tot)
 
 model = keras.models.load_model(model_path)
 
 
 def fitness(features):
-    X_tot, y_tot = get_data(X1, X2)
-    X_tot = np.concatenate((X_tot, features), 0)
-    X_tot = standardize(X_tot)
 
-    # Tested band
-    X_test = X_tot[len(X1)-1+len(X2)-1:]
+    X_test = scaler.transform(features)
 
     hist = model.predict(X_test, verbose=0)
-    return [hist[k][1] for k in range(len(hist))]
+    return [hist[k][0] for k in range(len(hist))]
 
 '''verif = [k[0]>0.5 for k in hist]
 

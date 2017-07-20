@@ -5,16 +5,36 @@ import random
 
 nb_out = 3
 max_arity = 2  # maximum number of input for a particular node
-node_types = ["UNARY_MIN", "UNARY_PLUS", "COS", 'SIN', "SUM", "MULT"]  # does NOT contain output
+node_types = ["UNARY_MIN", "EDGE", "UNARY_PLUS", "COS", 'SIN', "SUM", "MULT", "LOG", "EXP", "DELTA"]  # does NOT contain output
 inputs = ["X","Y","Z","bar","beat"]
+
+
+def delta(x, y):
+    threshold = 0.1
+    if np.abs(x-y) < threshold:
+        return 1
+    else:
+        return 0
+
+
+def edge(x):
+    if x < 0 or x > 10:
+        return 0
+    else:
+        return np.power(1 - x / 10, 5)
+
 
 class MusicGraph(nx.DiGraph):
     dict_functions = {"SUM": lambda x, y: np.array(x) + np.array(y),
+                      "DELTA": lambda x, y: np.array([delta(x[k], y[k]) for k in range(len(x))]),
+                      "EDGE": lambda x, y: np.array([edge(x[k]) for k in range(len(x))]),
                       "MULT": lambda x, y: np.array(x)*np.array(y),
                       "SIN": lambda x, y: np.sin(([(x[k]+y[k])/2 for k in range(len(x))])),
                       "COS": lambda x, y: np.cos(([(x[k]+y[k])/2 for k in range(len(x))])),
                       "UNARY_MIN": lambda x: -np.array(x),
-                      "UNARY_PLUS": lambda x: np.array(x) + 1}
+                      "UNARY_PLUS": lambda x: np.array(x) + 1,
+                      "LOG": lambda x, y: np.array(np.log(0.00001 + np.abs([(x[k]+y[k])/2 for k in range(len(x))]))),
+                      "EXP": lambda x, y: np.array(np.exp(np.abs([(x[k]+y[k])/2 for k in range(len(x))])))}
 
     f_node = [{"name": fname, "binary": False if fname.find('UNARY') != -1 else True} for fname in dict_functions]
 
@@ -37,9 +57,8 @@ class MusicGraph(nx.DiGraph):
         self._inputs = inputs
         if outputs is not None:
             self._outputs = outputs
-            nx.set_node_attributes(self, "parents", [])
         else:
-            self._outputs= []
+            self._outputs = []
         self._nodes_priority = []
 
         self.add_nodes_from(inputs)
@@ -47,6 +66,7 @@ class MusicGraph(nx.DiGraph):
         for i in range(internal_nodes_n): self.add_internal_node()
 
         nx.set_node_attributes(self, 'values', inputs)
+        nx.set_node_attributes(self, "parents", [])
         if connect:
             self.connect_random()
 
@@ -288,7 +308,10 @@ def output(args):
             try:note.append(note[-1])
             except:note.append(0)
         else:
-            vel = int(50.0 + 50.0 * np.log(1.0 + activity - threshold))
+            try:
+                vel = int(50.0 + 50.0 * np.log(1.0 + activity - threshold))
+            except:
+                vel = 0
             activity *= 0.05
             if vel > 127:
                 velocity.append(127)

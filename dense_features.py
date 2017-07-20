@@ -32,7 +32,7 @@ CLASSES = ["jazz", "rap", "rock", "blues"]
 X1 = ET.parse(
     r"jSymbolic2\features\extracted_feature_values_rock.xml").getroot()
 X2 = ET.parse(
-    r"jSymbolic2\features\extracted_feature_values_train_noise.xml").getroot()
+    r"jSymbolic2\features\extracted_feature_values_random.xml").getroot()
 X3 = ET.parse(
     r"jSymbolic2\features\extracted_feature_values_jazz.xml").getroot()
 X4 = ET.parse(
@@ -199,7 +199,7 @@ def run_model(model, X_train, X_test, y_train, y_test, iter=0):
     print("\nDuration :", time.time() - t)
 
     # Saving the model
-    model.save(r"models/dense_xml_rock_blues_%.3f.h5" % score[1])
+    model.save(r"models/dense_xml_rock_random_%.3f.h5" % score[1])
 
     '''plt.plot(hist1)  # + hist2.history.get("acc"))
     plt.xlabel('Epoch')
