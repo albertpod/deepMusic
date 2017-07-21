@@ -318,8 +318,11 @@ def output(args):
             else:
                 velocity.append(vel)
 
-            note.append(int(midiMap(int(18 + 32 * 0.5 * (1.0 + np.tanh(value))))))
-
+            try:  # catch fatal error, when value is NaN or infinity
+                note.append(int(midiMap(int(18 + 32 * 0.5 * (1.0 + np.tanh(value))))))
+            except:
+                value = 100
+                note.append(int(midiMap(int(18 + 32 * 0.5 * (1.0 + np.tanh(value))))))
     return note, velocity
 
 G = MusicGraph(inputs={"X": [0, 1, 1], "Y": [0, 2, 1], "Z": [0, 3, 1], "beat": [0, 4, 1], "bar": [0, 5, 1]},

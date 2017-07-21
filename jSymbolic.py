@@ -24,5 +24,4 @@ def get_features(midi):
         features.append(feat)
     os.remove('feature_values.xml')
 
-    # since there is only one song to extract, the output is just a list of the values of the features
     return features

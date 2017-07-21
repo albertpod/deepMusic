@@ -90,14 +90,14 @@ def runFromData(data=data, music_graph=None, cmpt=0):
             r = mg.node[node]["values"][k]
             results[mg._outputs.index(node)][k] = r
     # mg.plot()
-    instruments = [0, 27, 32]
+    instruments = [29, 26, 33]
     # Once results is computed, it is turned into MIDI file
     for i in range(nb_out):
         track = mido.MidiTrack()
         track.append(mido.Message("program_change", program=instruments[i], time=0, channel=i))
         cur_note = results[i][0][0]
         cur_vel = results[i][1][0]
-        quantum = int(mido.second2tick(1./48., tpb, 120))  # time unit, in ticks
+        quantum = int(mido.second2tick(1./96., tpb, 120))  # time unit, in ticks
         cur_dur = 0  # duration of a note
         abs_time = 0
         # state machine : 0 means a note is playing, 1 means no note is playing
@@ -118,7 +118,8 @@ def runFromData(data=data, music_graph=None, cmpt=0):
                     cur_dur += quantum
                 elif input_vel == 0:  # note_off, end the note. For now, we put absolute time in each note
                     track.append(mido.Message("note_on", note=cur_note, velocity=cur_vel, channel=i, time=abs_time))
-                    tmp.append((cur_note, cur_vel, i, cur_dur))
+                    track.append(mido.Message("note_off", note=cur_note, velocity=cur_vel, channel=i, time=abs_time+cur_dur))
+                    #tmp.append((cur_note, cur_vel, i, cur_dur))
                     cur_dur = quantum  # resets duration of note
                     state = 1
                 elif input_note > 0 and input_vel > 0:  # note_on, add another note
@@ -127,7 +128,9 @@ def runFromData(data=data, music_graph=None, cmpt=0):
                         # what about random decision ? for now, false
                     else:
                         track.append(mido.Message("note_on", note=cur_note, velocity=cur_vel, channel=i, time=abs_time))
-                        tmp.append((cur_note, cur_vel, i, cur_dur))
+                        track.append(mido.Message("note_off", note=cur_note, velocity=cur_vel, channel=i,
+                                                  time=abs_time + cur_dur))
+                        #tmp.append((cur_note, cur_vel, i, cur_dur))
                         cur_note = input_note
                         cur_vel = input_vel
                         cur_dur = quantum  # resets
@@ -138,9 +141,9 @@ def runFromData(data=data, music_graph=None, cmpt=0):
                 elif input_vel == 0:
                     cur_dur += quantum
                 elif input_note > 0 and input_vel > 0:
-                    while len(tmp) > 0:
+                    """while len(tmp) > 0:
                         n, v, c, dur = tmp.pop()
-                        track.append(mido.Message("note_off", note=n, velocity=v, channel=c, time=abs_time + dur))
+                        track.append(mido.Message("note_off", note=n, velocity=v, channel=c, time=abs_time + dur))"""
                     cur_note = input_note
                     cur_vel = input_vel
                     abs_time += cur_dur  # adds a rest

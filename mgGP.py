@@ -5,6 +5,7 @@ import fitness as fit
 from musicGeneration import data
 from musicGraph import *
 segment_size = 3
+nb_node = 20
 
 bar = data[:][0]
 beat = data[:][1]
@@ -49,7 +50,7 @@ def create_population(amount):
     for k in range(amount):
         dump.append(MusicGraph(inputs={"X": x, "Y": y, "Z": z, "beat": beat, "bar": bar},
                 outputs=["output1", "output2", "output3"],
-                internal_nodes_n=40, connect=True))
+                internal_nodes_n=nb_node, connect=True))
     return dump
 
 

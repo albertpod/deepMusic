@@ -35,7 +35,7 @@ print("Fitness calculated !")
 print("Evolution start")
 best_of_gen = [ANCESTORS for (F_POP, ANCESTORS) in sorted(zip(f_pop, chromosomes), reverse=True)][:best_kept]
 
-for _ in range(10):
+for _ in range(20):
     # Chromosomes
     population = mgGP.evolve(chromosomes, f_pop, generations=1)
     chromosomes = []

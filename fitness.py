@@ -26,11 +26,11 @@ print('TensorFlow version: {0}'.format(tf.__version__))
 X1 = ET.parse(
     r"jSymbolic2\features\extracted_feature_values_rock.xml").getroot()
 X2 = ET.parse(
-    r"jSymbolic2\features\extracted_feature_values_random.xml").getroot()
+    r"jSymbolic2\features\extracted_feature_values_random2.xml").getroot()
 X3 = ET.parse(
     r"jSymbolic2\features\extracted_feature_mid_test.xml").getroot()
 
-model_path ="models/dense_xml_rock_random_1.000.h5"
+model_path ="models/dense_xml_rock_random2_1.000.h5"
 
 
 def parse(X, y):
