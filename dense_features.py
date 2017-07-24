@@ -30,9 +30,9 @@ N_CLASSES = 2
 CLASSES = ["jazz", "rap", "rock", "blues"]
 
 X1 = ET.parse(
-    r"jSymbolic2\features\extracted_feature_values_rock.xml").getroot()
+    r"jSymbolic2\features\extracted_feature_blues_feat.xml").getroot()
 X2 = ET.parse(
-    r"jSymbolic2\features\extracted_feature_values_random2.xml").getroot()
+    r"jSymbolic2\features\extracted_feature_random_feat.xml").getroot()
 X3 = ET.parse(
     r"jSymbolic2\features\extracted_feature_values_jazz.xml").getroot()
 X4 = ET.parse(
@@ -148,7 +148,7 @@ def tSNE(X, y, labels, n_dim=3):
 
 # learning parameters
 learning_rate = 0.001
-epoches = 6000
+epoches = 5000
 batch_size = 100
 dropout = 0.6
 dense_layers = 600
@@ -160,7 +160,7 @@ y_test_cat = keras.utils.to_categorical(y_test, num_classes= N_CLASSES)
 def create_model(n_classes=N_CLASSES):
     # 1st model : Dense layers
     model = Sequential([
-        Dense(dense_layers, activation="relu", input_shape=(156,)),
+        Dense(dense_layers, activation="relu", input_shape=(len(X_tot[0]),)),
         Dropout(dropout),
         Dense(dense_layers, activation="relu"),
         Dropout(dropout),
@@ -199,7 +199,7 @@ def run_model(model, X_train, X_test, y_train, y_test, iter=0):
     print("\nDuration :", time.time() - t)
 
     # Saving the model
-    model.save(r"models/dense_xml_rock_random2_%.3f.h5" % score[1])
+    model.save(r"models/dense_xml_blues_random_%.3f.h5" % score[1])
 
     '''plt.plot(hist1)  # + hist2.history.get("acc"))
     plt.xlabel('Epoch')
@@ -213,7 +213,7 @@ def run_model(model, X_train, X_test, y_train, y_test, iter=0):
     plt.ylabel('Accuracy')
     plt.axis([0, epoches/100, 0, 1])
     plt.legend()
-    plt.savefig(r'plot/Testing_RockBlues_Dense_4layers%s_%.1fdropout_%sbatch_%.3ftest.png' % (dense_layers, dropout, batch_size, score[1]))
+    plt.savefig(r'plot/Testing_BluesRandom_Dense_4layers%s_%.1fdropout_%sbatch_%.3ftest.png' % (dense_layers, dropout, batch_size, score[1]))
     return score[1]
 
 

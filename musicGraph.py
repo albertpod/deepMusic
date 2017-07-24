@@ -5,7 +5,7 @@ import random
 
 nb_out = 3
 max_arity = 2  # maximum number of input for a particular node
-node_types = ["UNARY_MIN", "EDGE", "UNARY_PLUS", "COS", 'SIN', "SUM", "MULT", "LOG", "EXP", "DELTA"]  # does NOT contain output
+node_types = ["UNARY_MIN", "EDGE", "UNARY_PLUS","MOD", "DIV", "COS", 'SIN', "SUM", "MULT", "LOG", "EXP", "DELTA"]  # does NOT contain output
 inputs = ["X","Y","Z","bar","beat"]
 
 
@@ -24,11 +24,27 @@ def edge(x):
         return np.power(1 - x / 10, 5)
 
 
+def protected_divide(x,y):
+    if np.abs(y).any() < 0.00001:
+        return x
+    else:
+        return np.array(x)/np.array(y)
+
+
+def protected_mod(x,y):
+    if np.abs(y).any() < 0.00001:
+        return x
+    else:
+        return np.array(x)%np.array(y)
+
+
 class MusicGraph(nx.DiGraph):
     dict_functions = {"SUM": lambda x, y: np.array(x) + np.array(y),
                       "DELTA": lambda x, y: np.array([delta(x[k], y[k]) for k in range(len(x))]),
                       "EDGE": lambda x, y: np.array([edge(x[k]) for k in range(len(x))]),
                       "MULT": lambda x, y: np.array(x)*np.array(y),
+                      "DIV": lambda x, y: protected_divide(x, y),
+                      "MOD": lambda x, y: protected_mod(x,y),
                       "SIN": lambda x, y: np.sin(([(x[k]+y[k])/2 for k in range(len(x))])),
                       "COS": lambda x, y: np.cos(([(x[k]+y[k])/2 for k in range(len(x))])),
                       "UNARY_MIN": lambda x: -np.array(x),
@@ -170,8 +186,11 @@ class MusicGraph(nx.DiGraph):
                 self._outputs.append("output%s" % compt)
                 self.node["output%s" % compt]["parents"] = []
             else:
-                type = node_types[gene % len(node_types)]
-                dic = {"name": type, "binary": False if type.find('UNARY') != -1 else True}.copy()
+                try:
+                    type = node_types[gene % len(node_types)]
+                except:
+                    print(gene)
+                dic = {"name": type, "binary": False if type.find('UNARY') != -1 else True, "parents": []}.copy()
                 self.add_node(node_id, dic)
                 self.internals.append(node_id)
             # Then we connect the node
@@ -195,6 +214,7 @@ class MusicGraph(nx.DiGraph):
                     if input_id == node_id:
                         input_id = random.choice(inputs)  #FIXME : not a good way to do this, we should avoid random
                     self.add_path([input_id, node_id])
+                    self.node[node_id]["parents"].append(input_id)
 
             if node_id >= nb_nodes - nb_out:  # for output nodes
                 self.node["output%s" % compt]["values"] = []
@@ -204,7 +224,7 @@ class MusicGraph(nx.DiGraph):
 
         sorted = nx.topological_sort(self)
         for node in sorted:
-            pred = self.predecessors(node)
+            pred = self.node[node]["parents"]
             if node in self._outputs:
                 pred = self.node[node]["parents"][:]
             if len(pred) == 1:
@@ -215,7 +235,6 @@ class MusicGraph(nx.DiGraph):
             elif len(pred) == 2:
                 self.__compute_nodes(node, pred[0], pred[1])
 
-
     def to_array(self):
         array = []
         new_node_id = {}
@@ -225,7 +244,7 @@ class MusicGraph(nx.DiGraph):
                 continue
             else:
                 r = [node_types.index(self.node[node]["name"])]
-                pred = self.predecessors(node)
+                pred = self.node[node]["parents"]
                 new_node_id[node] = compt
                 compt += 1
                 for k in range(len(pred)):
@@ -239,7 +258,7 @@ class MusicGraph(nx.DiGraph):
         for node in self._outputs:
             i += 1
             r = [random.randint(0, len(node_types)-1)]
-            pred = self.predecessors(node)
+            pred = self.node[node]["parents"]
             if node in self._outputs:
                 pred = self.node[node]["parents"]
             for k in range(len(pred)):
