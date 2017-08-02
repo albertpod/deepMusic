@@ -1,3 +1,6 @@
+"""
+Compile it to generate various schema. Feel free to add more of them if you want input with more variety.
+"""
 #!/usr/bin/env python
 
 import sys

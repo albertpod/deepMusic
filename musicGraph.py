@@ -1,12 +1,15 @@
+"""
+This file contains the class MusicGraph that is used to generate midi files.
+"""
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
 import random
 
-nb_out = 3
+nb_out = 3  # number of nodes "output", which is the number of tracks
 max_arity = 2  # maximum number of input for a particular node
 node_types = ["UNARY_MIN", "EDGE", "UNARY_PLUS","MOD", "DIV", "COS", 'SIN', "SUM", "MULT", "LOG", "EXP", "DELTA"]  # does NOT contain output
-inputs = ["X","Y","Z","bar","beat"]
+inputs = ["X", "Y", "Z", "bar", "beat"]
 
 
 def delta(x, y):
@@ -25,19 +28,20 @@ def edge(x):
 
 
 def protected_divide(x,y):
-    if np.abs(y).any() < 0.00001:
+    if np.abs(y).all() < 0.00001:
         return x
     else:
         return np.array(x)/np.array(y)
 
 
 def protected_mod(x,y):
-    if np.abs(y).any() < 0.00001:
+    if np.abs(y).all() < 0.00001:
         return x
     else:
         return np.array(x)%np.array(y)
 
 
+# Main class that creates and manages Graphs
 class MusicGraph(nx.DiGraph):
     dict_functions = {"SUM": lambda x, y: np.array(x) + np.array(y),
                       "DELTA": lambda x, y: np.array([delta(x[k], y[k]) for k in range(len(x))]),
@@ -101,10 +105,12 @@ class MusicGraph(nx.DiGraph):
                 self.node[str(self._nodes_priority[index])]["parents"] = in_pair
             elif self.node[self._nodes_priority[index]]["binary"]:
                 in_pair = random.sample(self._nodes_priority[:index], 2)
+                self.node[self._nodes_priority[index]]["parents"] = in_pair
             else:
                 in_node = random.choice(self._nodes_priority[:index])
                 self.add_path([in_node, self._nodes_priority[index]])
                 self.__compute_nodes(self._nodes_priority[index], in_node)
+                self.node[self._nodes_priority[index]]["parents"] = [in_node]
                 continue
             self.add_path([in_pair[0], self._nodes_priority[index]])
             self.add_path([in_pair[1], self._nodes_priority[index]])
@@ -121,7 +127,7 @@ class MusicGraph(nx.DiGraph):
             self.add_path(in1, self.node[node])
 
     def __set_priority(self):
-        """ Create a stack list of all nodes. """
+        """ Create a stack list of all nodes."""
         self._nodes_priority = list(self._inputs.keys()) + self.internals + list(self._outputs)
 
     def __paint(self):
@@ -168,8 +174,8 @@ class MusicGraph(nx.DiGraph):
 
     def array_to_graph(self, genes):
         """
-        Turns array into graphs.
-        :param gene: divided in chunks of size max_arity + 1
+        Turns array into graphs. To use it, create an empty Graph (0 nodes, not connected) and feed this function a valid array.
+        :param gene: divided in chunks of size max_arity + 1. For detailed information concerning the array, cf ReadMe
         :return: MusicGraph object
         """
         # Creates a graph with only input and output
@@ -177,6 +183,7 @@ class MusicGraph(nx.DiGraph):
         nb_nodes = int(len(genes) / genes_per_node)
 
         compt = 1
+        # First, we create the nodes.
         for node_id in range(nb_nodes):
             gene_id = node_id * genes_per_node
             gene = genes[gene_id]
@@ -186,14 +193,11 @@ class MusicGraph(nx.DiGraph):
                 self._outputs.append("output%s" % compt)
                 self.node["output%s" % compt]["parents"] = []
             else:
-                try:
-                    type = node_types[gene % len(node_types)]
-                except:
-                    print(gene)
+                type = node_types[gene % len(node_types)]
                 dic = {"name": type, "binary": False if type.find('UNARY') != -1 else True, "parents": []}.copy()
                 self.add_node(node_id, dic)
                 self.internals.append(node_id)
-            # Then we connect the node
+            # Then we connect the nodes.
 
             eligible_node = min(self.number_of_nodes() - 5, nb_nodes - nb_out)
             if type.find("UNARY") != -1:
@@ -212,7 +216,8 @@ class MusicGraph(nx.DiGraph):
                     self.node["output%s" % compt]["parents"].append(input_id)
                 else:
                     if input_id == node_id:
-                        input_id = random.choice(inputs)  #FIXME : not a good way to do this, we should avoid random
+                        # in the case where a node is connected to itself, we randomly pick another parent
+                        input_id = inputs[node_id%len(inputs)]
                     self.add_path([input_id, node_id])
                     self.node[node_id]["parents"].append(input_id)
 
@@ -236,6 +241,13 @@ class MusicGraph(nx.DiGraph):
                 self.__compute_nodes(node, pred[0], pred[1])
 
     def to_array(self):
+        """
+        Gives the array associated with the graph. Note that this array is not unique, since we use a topological sort
+        which is not deterministic. Hence, the Graph re-generated with this array should have the same structure, but
+        the ID of each nodes may differ, which should not change the output midi file.
+        Cf ReadMe for detailed information.
+        :return: array, that can be fed to self.array_to_graph
+        """
         array = []
         new_node_id = {}
         compt = 0
@@ -294,8 +306,17 @@ class MusicGraph(nx.DiGraph):
         plt.axis("off")
         plt.show()
 
+    def variety(self):
+        # Fitness function, basically counts the number of different notes.
+        retval = 0
+        for out in self._outputs:
+            val = self.node[out]["values"][0]
+            retval += len(set(val)) / len(val)  # Number of different notes / Total number of notes
+        return retval / nb_out
+
 
 def midiMap(n):
+    # Maps a value n to a valid note.
     octave = n / 7
     chroma = n % 7
     retval = octave * 12
@@ -309,6 +330,12 @@ def midiMap(n):
 
 
 def output(args):
+    """
+    The implementation is not ours, it is merely a copy of what was done in the original paper. Hence, some values are
+    chosen quite arbitrarily.
+    :param args:
+    :return:
+    """
     note, velocity = [], []
     activity = 0
     for k in range(len(args[0])):
@@ -344,6 +371,8 @@ def output(args):
                 note.append(int(midiMap(int(18 + 32 * 0.5 * (1.0 + np.tanh(value))))))
     return note, velocity
 
+
+# Test examples, feel free to comment it out.
 G = MusicGraph(inputs={"X": [0, 1, 1], "Y": [0, 2, 1], "Z": [0, 3, 1], "beat": [0, 4, 1], "bar": [0, 5, 1]},
                outputs=["output1", "output2", "output3"],
                internal_nodes_n=20, connect=True)
@@ -356,3 +385,7 @@ G2 = MusicGraph(inputs={"X": [0, 1, 1], "Y": [0, 2, 1], "Z": [0, 3, 1], "beat": 
 
 G2.array_to_graph(array)
 array2 = G2.to_array()
+G3 = MusicGraph(inputs={"X": [0, 1, 1], "Y": [0, 2, 1], "Z": [0, 3, 1], "beat": [0, 4, 1], "bar": [0, 5, 1]},
+                # outputs=["output1", "output2", "output3"],
+                internal_nodes_n=0, connect=False)
+G3.array_to_graph(array2)

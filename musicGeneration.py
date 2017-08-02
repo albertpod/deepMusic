@@ -1,3 +1,6 @@
+"""
+The main fonction runFromData generates midi files given a music Graph.
+"""
 import csv
 import os
 import matplotlib.pyplot as pl
@@ -7,11 +10,13 @@ import networkx
 
 nb_out = musicGraph.nb_out
 
+# Empty the folder that contains the midi files.
 f = [file for file in os.listdir("midifiles") if file.endswith(".mid")]
 for file in f:
     os.remove("midifiles/"+file)
 
 
+# Deprecated
 def run(times, curves):
     """
     Each node of the graph is run in a certain order. When a node of type "output" is run, the values are stored.
@@ -62,7 +67,8 @@ z = data[:][4]
 
 def runFromData(data=data, music_graph=None, cmpt=0):
     """
-    Generates a MIDI file given time and data array
+    Generates a MIDI file given time and data array. Implementation is the same as in the original paper.
+    Some mistakes may have been made, especially in the case where input_vel == 0.
     :param music_graph: graph that will be run
     :param filename: txyz file. Turned into list of 5 lists of length data.length : "bar", "beat", "x", "y" and "z"
     :return: null (or a MIDI format object ?)
@@ -73,7 +79,7 @@ def runFromData(data=data, music_graph=None, cmpt=0):
     # which contains 2 information : the note and its velocity
     results = [[[0 for i in range(len(data))] for k in range(2)] for j in range(nb_out)]
     if music_graph is None:
-
+        # This case is deprecated
 
         curves = [x, y, z]
         times = [t, b]
@@ -90,11 +96,16 @@ def runFromData(data=data, music_graph=None, cmpt=0):
             r = mg.node[node]["values"][k]
             results[mg._outputs.index(node)][k] = r
     # mg.plot()
-    instruments = [29, 26, 33]
+    # We chose the instruments arbitrarily. Use Fruity Loops to change them afterward if you want.
+    # Cf Midi documentation : for percussion, we need to use channel 10 and program 0.
+    instruments = [29, 0, 33]
     # Once results is computed, it is turned into MIDI file
     for i in range(nb_out):
         track = mido.MidiTrack()
-        track.append(mido.Message("program_change", program=instruments[i], time=0, channel=i))
+        chan = i
+        if i == 1:
+            chan = 9
+        track.append(mido.Message("program_change", program=instruments[i], time=0, channel=chan))
         cur_note = results[i][0][0]
         cur_vel = results[i][1][0]
         quantum = int(mido.second2tick(1./96., tpb, 120))  # time unit, in ticks
@@ -104,7 +115,6 @@ def runFromData(data=data, music_graph=None, cmpt=0):
         state = 1
         for j in range(len(x)+1):
 
-            tmp = []
             if j == len(x):
                 input_note = 1
                 input_vel = 1   # puts a note_off at the end
@@ -117,9 +127,8 @@ def runFromData(data=data, music_graph=None, cmpt=0):
                 if input_vel < 0:  # keep on playing the note
                     cur_dur += quantum
                 elif input_vel == 0:  # note_off, end the note. For now, we put absolute time in each note
-                    track.append(mido.Message("note_on", note=cur_note, velocity=cur_vel, channel=i, time=abs_time))
-                    track.append(mido.Message("note_off", note=cur_note, velocity=cur_vel, channel=i, time=abs_time+cur_dur))
-                    #tmp.append((cur_note, cur_vel, i, cur_dur))
+                    track.append(mido.Message("note_on", note=cur_note, velocity=cur_vel, channel=chan, time=abs_time))
+                    track.append(mido.Message("note_off", note=cur_note, velocity=cur_vel, channel=chan, time=abs_time+cur_dur))
                     cur_dur = quantum  # resets duration of note
                     state = 1
                 elif input_note > 0 and input_vel > 0:  # note_on, add another note
@@ -127,10 +136,9 @@ def runFromData(data=data, music_graph=None, cmpt=0):
                         cur_dur += quantum  # but we could chose to create a new note instead
                         # what about random decision ? for now, false
                     else:
-                        track.append(mido.Message("note_on", note=cur_note, velocity=cur_vel, channel=i, time=abs_time))
-                        track.append(mido.Message("note_off", note=cur_note, velocity=cur_vel, channel=i,
+                        track.append(mido.Message("note_on", note=cur_note, velocity=cur_vel, channel=chan, time=abs_time))
+                        track.append(mido.Message("note_off", note=cur_note, velocity=cur_vel, channel=chan,
                                                   time=abs_time + cur_dur))
-                        #tmp.append((cur_note, cur_vel, i, cur_dur))
                         cur_note = input_note
                         cur_vel = input_vel
                         cur_dur = quantum  # resets
@@ -163,6 +171,7 @@ def runFromData(data=data, music_graph=None, cmpt=0):
             new_track.append(message)
 
         mid.tracks.append(new_track)
+    # We test that the midi file is not empty (this happens between 10 and 20% of the time)
     if len(mid.tracks[0]) + len(mid.tracks[1]) + len(mid.tracks[2]) != 3:
         mid.save("midifiles/test%s.mid" % cmpt)
         return True

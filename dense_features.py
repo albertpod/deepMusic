@@ -1,3 +1,8 @@
+"""
+This file is used to generate a model that classifies songs depending on the genre they belong to.
+The model can use from two to four different genres.
+"""
+
 import os
 import time
 import xml.etree.ElementTree as ET
@@ -20,17 +25,21 @@ from sklearn import datasets
 from mpl_toolkits.mplot3d import Axes3D
 #from XGBoost import run_XGBoost
 
-NB_NOTES_READ = dataload_hex.MIN_SIZE
+# NB_NOTES_READ = dataload_hex.MIN_SIZE
 
+# This prevents Tensorflow from throwing warning messages all the time
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 print('TensorFlow version: {0}'.format(tf.__version__))
 
+# Global time counter
 t = time.time()
+# Number of different classes processed (1<x<5)
 N_CLASSES = 2
 CLASSES = ["jazz", "rap", "rock", "blues"]
 
+# Extracts data from jSymbolic2 generated xml files. Cf ReadMe for more detailed information
 X1 = ET.parse(
-    r"jSymbolic2\features\extracted_feature_blues_feat.xml").getroot()
+    r"jSymbolic2\features\extracted_feature_led_zep124.xml").getroot()
 X2 = ET.parse(
     r"jSymbolic2\features\extracted_feature_random_feat.xml").getroot()
 X3 = ET.parse(
@@ -42,28 +51,39 @@ print("XML files parsed")
 
 
 def parse(X, y):
+    """
+    :param X: jSymbolic2 data
+    :param y: id of the class
+    :return: (features of each song of X, a vector that contains the id of the class)
+    """
     out = []
     for song in X[1:]:  # remove the first
         features = []
         for feature in song[1:]:  # remove the first
             features.append(float(feature[1].text.replace(',', '.')))  # commas in XML files have to be turned into dot
         out.append(features)
-    return out, [y for k in range(len(X[1:]))]
+    return out, [y for _ in range(len(X[1:]))]
+
 
 def get_data(X1, X2, X3=None, X4=None):
+    """
+    :param X1 to X4: jSymbolic2 data
+    :return: (feature vector of each songs, their id)
+    """
     xt1, yt1 = parse(X1, 0)
     xt2, yt2 = parse(X2, 1)
     xt3, yt3, xt4, yt4 = None, None, None, None
-    if X3 != None:
+    if X3 is not None:
         xt3, yt3 = parse(X3, 2)
-    if X4 != None:
+    if X4 is not None:
         xt4, yt4 = parse(X4, 3)
 
     X_tot = np.concatenate(tuple((k for k in (xt1, xt2, xt3, xt4) if k is not None)))
     y_tot = np.concatenate(tuple((k for k in (yt1, yt2, yt3, yt4) if k is not None)))
     return X_tot, y_tot
 
-    # Standardization
+
+# Standardization, cf implementation of StandardScaler
 def standardize(X):
     scaler = StandardScaler().fit(X)
     rescaled = scaler.transform(X)
@@ -71,7 +91,11 @@ def standardize(X):
 
 
 def data_process(X1, X2, X3=None, X4=None):
-
+    """
+    Standardizes, randomizes the data, making it usable by keras
+    :param X1 to X4: jSymbolic2 data
+    :return: X_train, X_test, y_train, y_test
+    """
     X_tot, y_tot = get_data(X1, X2, X3, X4)
 
     X_tot = standardize(X_tot)
@@ -86,7 +110,7 @@ def data_process(X1, X2, X3=None, X4=None):
 
     return X_train, X_test, y_train, y_test
 
-
+# Not really clever switch, that calls data_process for the good number of inputs
 if N_CLASSES == 2:
     X_train, X_test, y_train, y_test = data_process(X1, X2)
 elif N_CLASSES == 3:
@@ -111,6 +135,7 @@ print("X_train.shape : {0}\nX_test.shape : {1}".format(X_train.shape, X_test.sha
 print("y_train.shape : {0}\ny_test.shape : {1}".format(y_train.shape, y_test.shape))
 
 
+# Scatter plot, uses 3 most significant features.
 def tSNE(X, y, labels, n_dim=3):
     model = TSNE(n_components=n_dim, random_state=42)
     np.set_printoptions(suppress=True)
@@ -146,19 +171,25 @@ def tSNE(X, y, labels, n_dim=3):
 # tSNE(X_train, y_train, CLASSES)
 # call_GMB()
 
-# learning parameters
-learning_rate = 0.001
-epoches = 5000
-batch_size = 100
-dropout = 0.6
-dense_layers = 600
+# Learning parameters
+learning_rate = 0.001  # Can be lower, avoid making it bigger
+epoches = 5000  # Doesn't need to be too high (training accuracy can always improve, but then loss gets big)
+batch_size = 100  # Has little impact on the results
+dropout = 0.6  # Used to avoid overfitting, 0.6 seems to be a good value
+dense_layers = 600  # 600 is empirically a good value
 
 
 y_train_cat = keras.utils.to_categorical(y_train, num_classes= N_CLASSES)
 y_test_cat = keras.utils.to_categorical(y_test, num_classes= N_CLASSES)
 
+
 def create_model(n_classes=N_CLASSES):
-    # 1st model : Dense layers
+    """
+    Dense layers model : the number of layers could be changed, but it seems hard to significantly improve this model
+    using this architecture. Should consider using other types of layers (convolutionnal, LSTM...)
+    :param n_classes:
+    :return: a Keras model
+    """
     model = Sequential([
         Dense(dense_layers, activation="relu", input_shape=(len(X_tot[0]),)),
         Dropout(dropout),
@@ -174,6 +205,17 @@ def create_model(n_classes=N_CLASSES):
 
 
 def run_model(model, X_train, X_test, y_train, y_test, iter=0):
+    """
+    Main function. Evolves the given model using training data and tests it with testing data.
+    Also plot and save the figure that shows accuracy through evolution. Saves the model.
+    :param model: Keras model
+    :param X_train:
+    :param X_test:
+    :param y_train:
+    :param y_test:
+    :param iter: optionnal, used when iterating
+    :return: score for testing set using the evolved model
+    """
     # Custom optimizer
     sgd = keras.optimizers.SGD(lr=learning_rate)
 
@@ -199,7 +241,7 @@ def run_model(model, X_train, X_test, y_train, y_test, iter=0):
     print("\nDuration :", time.time() - t)
 
     # Saving the model
-    model.save(r"models/dense_xml_blues_random_%.3f.h5" % score[1])
+    model.save(r"models/dense_xml_ledzep_random_%.3f.h5" % score[1])
 
     '''plt.plot(hist1)  # + hist2.history.get("acc"))
     plt.xlabel('Epoch')
@@ -213,11 +255,18 @@ def run_model(model, X_train, X_test, y_train, y_test, iter=0):
     plt.ylabel('Accuracy')
     plt.axis([0, epoches/100, 0, 1])
     plt.legend()
-    plt.savefig(r'plot/Testing_BluesRandom_Dense_4layers%s_%.1fdropout_%sbatch_%.3ftest.png' % (dense_layers, dropout, batch_size, score[1]))
+    plt.savefig(r'plot/Testing_LedzepRandom_Dense_4layers%s_%.1fdropout_%sbatch_%.3ftest.png' % (dense_layers, dropout, batch_size, score[1]))
     return score[1]
 
 
 def one_vs_all(y_train, y_test, num_class=0):
+    """
+    Used when the number of class is bigger than 2.
+    :param y_train:
+    :param y_test:
+    :param num_class:
+    :return:
+    """
     ytr, yte = [], []
     for k in range(len(y_train)):
         ytr.append(int(y_train[k] == num_class))
@@ -227,6 +276,10 @@ def one_vs_all(y_train, y_test, num_class=0):
 
 
 def run_model_one_vs_all():
+    """
+    Same as run_model with more classes. Less efficient.
+    :return:
+    """
     # Custom optimizer
     sgd = keras.optimizers.SGD(lr=learning_rate)
 
@@ -295,11 +348,14 @@ def run_model_one_vs_all():
     plt.savefig(r'plot/Testing_JRRB_Dense_4layers%s_%.1fdropout_%sbatch_%.3ftest.png' % (dense_layers, dropout, batch_size, score/len(y_test)))
     return score
 
+# Dirty switch to run the evolution.
 if N_CLASSES == 2:
     model = create_model()
     out = run_model(model, X_train, X_test, y_train_cat, y_test_cat)
 else:
     out = run_model_one_vs_all()
+
+# StratifiedKFold method (cf google to see how it works), used to get better insight on the results.
 
 '''if __name__ == "__main__":
     n_folds = 5

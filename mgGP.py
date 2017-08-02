@@ -1,3 +1,6 @@
+"""
+Genetic component of the program. Supports mutation, crossover and elitism, generates initial random population.
+"""
 import random
 
 import numpy as np
@@ -15,7 +18,7 @@ z = data[:][4]
 
 
 def mutate(individual, probability=0.05):
-
+    # Probabilty could be changed, or could be applied to 5% of the population, instead of 5% of each values.
     for _ in individual:
         if random.uniform(0.0, 1.0) < probability:
             fi_gene = random.randint(1, len(individual) - 1)
@@ -24,6 +27,7 @@ def mutate(individual, probability=0.05):
 
 
 def crossover(ind_f, ind_s, min_size=12):
+    # Precautions regarding this functions need not be taken, for the function array_to_graph makes sure it always works
     child = []
     xover_f, xover_s = 0, len(ind_s)
     while xover_f + (len(ind_s) - xover_s) < min_size:
@@ -45,7 +49,6 @@ def crossover(ind_f, ind_s, min_size=12):
 
 
 def create_population(amount):
-    # Meant to be
     dump = []
     for k in range(amount):
         dump.append(MusicGraph(inputs={"X": x, "Y": y, "Z": z, "beat": beat, "bar": bar},
@@ -79,6 +82,7 @@ def get_statistics(population):
 
 def evolve(population, f_pop, generations=100):
     for i in range(generations):
+        # elitism
         new_population, new_f_pop = elitism(population, f_pop)
         tmp = new_population[:]
         for k in range(len(tmp), 100):
