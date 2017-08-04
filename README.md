@@ -17,6 +17,13 @@ Evolutionary Generative Music" for more detail on the way schema works).
 Then you can start the evolution : simply run `main.py`, it will produce an initial population and evolve it, creating
 midi files you can listen to.
 
+jSymbolic2
+----------
+In order to extract features from a MIDI file, you have to use jSymbolic2. You can select 
+among a huge number of features which one you think are relevant : we already did that, and 
+the file `jSymbolicDefaultConfigs.txt` contains this information and is loaded when 
+jSymbolic2 is run.
+
 Arrays <=> Graph
 ----------------
 MusicGraph objects are explained in the paper or McDermott. You can visualize them using the function `plot`. Basically,
